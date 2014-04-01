@@ -3,22 +3,22 @@
 #include <boost/chrono/duration.hpp>
 
 // Utility type representing a tenth of a microsecond, or one 100-ns interval
-typedef boost::chrono::duration<DWORD, boost::ratio<1, 1000 * 1000 * 10>> t_tenthUS;
+typedef boost::chrono::duration<uint32_t, boost::ratio<1, 1000 * 1000 * 10>> t_tenthUS;
 
 // 1.0 control struct
 #pragma pack(push, 1)
 struct uvc_stream_ctrl_t {
-	WORD bmHint;				//0
-	BYTE bFormatIndex;			//2
-	BYTE bFrameIndex;			//3
-	DWORD dwFrameInterval;		//4
-	WORD wKeyFrameRate;			//8
-	WORD wPFrameRate;			//10
-	WORD wCompQuality;			//12
-	WORD wCompWindowSize;		//14
-	WORD wDelay;				//16
-	DWORD dwMaxVideoFrameSize;	//18
-	DWORD dwMaxPayloadTransferSize; //22
+	uint16_t bmHint;				//0
+	uint8_t bFormatIndex;			//2
+	uint8_t bFrameIndex;			//3
+	uint32_t dwFrameInterval;		//4
+	uint16_t wKeyFrameRate;			//8
+	uint16_t wPFrameRate;			//10
+	uint16_t wCompQuality;			//12
+	uint16_t wCompWindowSize;		//14
+	uint16_t wDelay;				//16
+	uint32_t dwMaxVideoFrameSize;	//18
+	uint32_t dwMaxPayloadTransferSize; //22
 };
 
 /** Color coding of stream, transport-independent
@@ -322,17 +322,17 @@ struct uvc_vs_probe_control {
     unsigned char:0;
     unsigned char:8;
   } bmHint;
-  BYTE bFormatIndex;
-  BYTE bFrameIndex;
+  uint8_t bFormatIndex;
+  uint8_t bFrameIndex;
 
   t_tenthUS dwFrameInterval;
-  WORD wKeyFrameRate;
-  WORD wPFrameRate;
-  WORD wCompQuality;
-  WORD wCompWindowSize;
-  WORD wDelay;
-  DWORD dwMaxVideoFrameSize;
-  DWORD dwMaxPayloadTransferSize;
+  uint16_t wKeyFrameRate;
+  uint16_t wPFrameRate;
+  uint16_t wCompQuality;
+  uint16_t wCompWindowSize;
+  uint16_t wDelay;
+  uint32_t dwMaxVideoFrameSize;
+  uint32_t dwMaxPayloadTransferSize;
 };
 static_assert(sizeof(uvc_vs_probe_control) == 26, "UVC probe control is incorrectly sized");
 
@@ -346,13 +346,13 @@ struct uvc_vs_probe_control_full:
     unsigned char:0;
   } bmFramingInfo;
   
-  BYTE bPreferredVersion;
-  BYTE bMinVersion;
-  BYTE bMaxVersion;
-  BYTE bUsage;
-  BYTE bBitDepthLuma;
-  BYTE bmSettings;
-  BYTE bMaxNumberOfRefFramesPlus1;
+  uint8_t bPreferredVersion;
+  uint8_t bMinVersion;
+  uint8_t bMaxVersion;
+  uint8_t bUsage;
+  uint8_t bBitDepthLuma;
+  uint8_t bmSettings;
+  uint8_t bMaxNumberOfRefFramesPlus1;
   struct {
     unsigned char s1Rate:4;
     unsigned char s2Rate:4;
@@ -365,7 +365,7 @@ struct uvc_vs_probe_control_full:
     unsigned s3Structure:16;
     unsigned s4Structure:16;
   } bmLayoutPerStream;
-  DWORD dwClockFrequency;
+  uint32_t dwClockFrequency;
 };
 
 static_assert(sizeof(uvc_vs_probe_control_full) == 48, "UVC probe control is incorrectly sized");

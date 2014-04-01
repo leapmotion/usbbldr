@@ -1,35 +1,68 @@
+/* Copyright (c) 2014 LEAP Motion. All rights reserved.
+*
+* The intellectual and technical concepts contained herein are proprietary and
+* confidential to Leap Motion, and are protected by trade secret or copyright
+* law. Dissemination of this information or reproduction of this material is
+* strictly forbidden unless prior written permission is obtained from LEAP
+* Motion.
+*/
+
 #pragma once
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#include <stdint.h>
+
 int HelloWorld(void);
 
   // //////////////////////////////////////////////////////////////////
   // //////////////////////////////////////////////////////////////////
   // API
+typedef struct usbdescbldr_ctx_s {
+  unsigned char 	initialized;	// Have we been initialized? 0: no.
+
+  unsigned char *	buffer;		    // Start of user-provided buffer (if any)
+  size_t		      bufferSize;	  // Length in uint8_tas of any user-provided buffer
+  unsigned char * append;		    // Address in buffer for next addition (append)
+  unsigned char *	last_append;	// Start address of last completed 'level' (see stack)
+
+  unsigned int  	i_string;	    // Next string index to be assigned
+  unsigned int    i_devConfig;  // Next device configuration index to be assigned
+
+  uint16_t(*fLittleShortToHost)(uint16_t s);
+  uint16_t(*fHostToLittleShort)(uint16_t s);
+  unsigned int(*fLittleIntToHost)(unsigned int s);
+  unsigned int(*fHostToLittleInt)(unsigned int s);
+
+  // ...
+} usbdescbldr_ctx_t;
 
   typedef enum {
     USBDESCBLDR_OK,
     USBDESCBLDR_UNINITIALIZED,		// Never initialized
-    USBDESCBLDR_UNSUPPORTED,		// Never written...
-    USBDESCBLDR_DRY_RUN,		// Not actually creating the datum
-    USBDESCBLDR_NO_SPACE,		// Buffer exhausted
+    USBDESCBLDR_UNSUPPORTED,		  // Never written...
+    USBDESCBLDR_DRY_RUN,		      // Not actually creating the datum
+    USBDESCBLDR_NO_SPACE,		      // Buffer exhausted
     USBDESCBLDR_LEVEL_VIOLATION,	// Can't do that here
-    USBDESCBLDR_INVALID,		// Too many, duplicate, range error..
-    USBDESCBLDR_OVERSIZED,
+    USBDESCBLDR_INVALID,		      // Null ptr, duplicate, range error..
+    USBDESCBLDR_OVERSIZED,        // Exceeds size limit
+    USBDESCBLDR_TOO_MANY,         // Exceeds instance count limit
     // ...
   } usbdescbldr_status_t;
 
-  // The 'handle' by which callers store the results of maker calls
+  // The 'handle' by which callers store the results of maker calls. Callers
+  // 'know' this structure only to provide them as return (out) parameters;
+  // never should they modify the contents.
 #define USBDESCBLDR_MAX_CHILDREN 8
   typedef struct usbdescbldr_item_s {
     void *                      address;        // Where it is stored
-    size_t                      size;           // size of item itself
+    unsigned int                index;          // Index, interface number, endpoint number, anything of this nature
+    size_t                      size;           // Size of item itself
     size_t                      totalSize;      // Size of item and all children (may be easier to compute this only when done)
-    usbdescbldr_item_s *        item[USBDESCBLDR_MAX_CHILDREN];
-    unsigned int                items;
+    unsigned int                items;          // Number iof sub-items ('children')
+    struct usbdescbldr_item_s * item[USBDESCBLDR_MAX_CHILDREN];
   } usbdescbldr_item_t;
 
   // Setup and teardown
@@ -40,8 +73,9 @@ int HelloWorld(void);
   // but do not actually create a descriptor.
 
   usbdescbldr_status_t
-  usbdescbldr_init(unsigned char *      buffer,
-                   size_t               buffer_size);
+    usbdescbldr_init(usbdescbldr_ctx_t *  ctx,
+    unsigned char *      buffer,
+    size_t               bufferSize);
 
 
   // Commit (complete/finish) the descriptor in progress.
@@ -75,15 +109,15 @@ int HelloWorld(void);
   // Pass the context, a result item, and the subordinate items.
 
   usbdescbldr_status_t
-  usbdescbldr_add_children(usbdescbldr_context_t *      ctx,
-                           usbdescbldr_item_t *         parent, 
-                           ...)
+    usbdescbldr_add_children(usbdescbldr_ctx_t *  ctx,
+    usbdescbldr_item_t * parent,
+    ...);
 
   // Create the language descriptor (actually string, index 0).
   // Pass the context, a result item, and the IDs.
   usbdescbldr_status_t
-  usbdescbldr_make_languageIDs(usbdescbldr_context_t *  ctx,
-                               usbdescbldr_item_t *     item,
+    usbdescbldr_make_languageIDs(usbdescbldr_ctx_t * ctx,
+                               usbdescbldr_item_t * item,
                                ...);
 
   // Generate a USB Device Descriptor. This is one-shot and top-level.
@@ -91,42 +125,42 @@ int HelloWorld(void);
   // short-form structure.
 
   typedef struct {
-    unsigned short	bcdUSB;		// USB Spec Version
-    unsigned char	bDeviceClass;
-    unsigned char	bDeviceSubClass;
-    unsigned char	bDeviceProtocol;
-    unsigned short	idVendor;
-    unsigned short	idProduct;
-    unsigned short	bcdDevice;	// BCD-encoded Release #
-    unsigned char	iManufacturer;	// String index
-    unsigned char	iProduct;	// String index
-    unsigned char	iSerialNumber;	// String Index
-    unsigned char	bNumConfigurations;
+    uint16_t	bcdUSB;		        // USB Spec Version
+    uint8_t	  bDeviceClass;
+    uint8_t	  bDeviceSubClass;
+    uint8_t	  bDeviceProtocol;
+    uint16_t	idVendor;
+    uint16_t	idProduct;
+    uint16_t	bcdDevice;	      // BCD-encoded Release #
+    uint8_t	  iManufacturer;	  // String index
+    uint8_t	  iProduct;	        // String index
+    uint8_t	  iSerialNumber;	  // String Index
+    uint8_t	  bNumConfigurations;
   } usbdescbldr_device_descriptor_short_form_t;
 
   usbdescbldr_status_t
-  usbdescbldr_make_device_descriptor(usbdescbldr_context_t *ctx,
+    usbdescbldr_make_device_descriptor(usbdescbldr_ctx_t *ctx,
                                      usbdescbldr_item_t *item,
                                      usbdescbldr_device_descriptor_short_form_t *form);
     
   
   typedef struct {
-    unsigned short	bcdUSB;		// USB Spec Version
-    unsigned char	bDeviceClass;
-    unsigned char	bDeviceSubClass;
-    unsigned char	bDeviceProtocol;
-    unsigned short	idVendor;
-    unsigned short	idProduct;
-    unsigned short	bcdDevice;	// BCD-encoded Release #
-    unsigned char	iManufacturer;	// String index
-    unsigned char	iProduct;	// String index
-    unsigned char	iSerialNumber;	// String Index
-    unsigned char	bNumConfigurations;
+    uint16_t	bcdUSB;		// USB Spec Version
+    uint8_t	bDeviceClass;
+    uint8_t	bDeviceSubClass;
+    uint8_t	bDeviceProtocol;
+    uint16_t	idVendor;
+    uint16_t	idProduct;
+    uint16_t	bcdDevice;	// BCD-encoded Release #
+    uint8_t	iManufacturer;	// String index
+    uint8_t	iProduct;	// String index
+    uint8_t	iSerialNumber;	// String Index
+    uint8_t	bNumConfigurations;
   } usbdescbldr_device_qualifier_short_form_t;
 
   // Generate a USB Device Qualifier Descriptor. This is one-shot and top-level.
   usbdescbldr_status_t
-  usbdescbldr_make_device_qualifier_descriptor(usbdescbldr_context_t *ctx,
+    usbdescbldr_make_device_qualifier_descriptor(usbdescbldr_ctx_t *ctx,
                                                usbdescbldr_item_t *item, 
                                                usbdescbldr_device_qualifier_short_form_t * form);
     
@@ -134,24 +168,24 @@ int HelloWorld(void);
   // Define a new string and obtain its index. This is a one-shot top-level item.
   // Pass the string in ASCII and NULL-terminated (a classic C string).
   usbdescbldr_status_t
- usbdescbldr_make_string_descriptor(usbdescbldr_context_t *ctx,
+    usbdescbldr_make_string_descriptor(usbdescbldr_ctx_t *ctx,
                                     usbdescbldr_item_t *item,     // OUT
-                                    unsigned char *index,         // OUT
+                                    uint8_t *index,         // OUT
                                     char *string);                // OUT
 
 
   // Generate a Binary Object Store. This is top-level.
   // Add the device Capabilities to it to complete the BOS.
   usbdescbldr_status_t 
-  usbdescbldr_make_bos_descriptor(usbdescbldr_context_t *       ctx,
+    usbdescbldr_make_bos_descriptor(usbdescbldr_ctx_t *       ctx,
                                   usbdescbldr_item_t *          item);
 
   // Generate a Device Capability descriptor.
   usbdescbldr_status_t
-  usbdescbldr_make_device_capability_descriptor(usbdescbldr_context_t * ctx,
+    usbdescbldr_make_device_capability_descriptor(usbdescbldr_ctx_t * ctx,
                                                 usbdescbldr_item_t *    item,
-                                                unsigned char	          bDevCapabilityType,
-                                                unsigned char *	        typeDependent,	// Anonymous byte data
+                                                uint8_t	          bDevCapabilityType,
+                                                uint8_t *	        typeDependent,	// Anonymous uint8_ta data
                                                 size_t		              typeDependentSize);
 
  
@@ -176,10 +210,10 @@ int HelloWorld(void);
   } usbdescbldr_device_configuration_short_form_t;
 
   usbdescbldr_status_t
-    usbdescbldr_make_device_configuration_descriptor(usbdescbldr_context_t * ctx,
+    usbdescbldr_make_device_configuration_descriptor(usbdescbldr_ctx_t * ctx,
     usbdescbldr_item_t * item,
-    unsigned char * index,
-    usbdescbldr_device_qualifier_short_form_t * form);
+    uint8_t * index,
+    usbdescbldr_device_configuration_short_form_t * form);
 
 
   typedef struct {
@@ -193,7 +227,7 @@ int HelloWorld(void);
   } usbdescbldr_standard_interface_short_form_t;
 
   usbdescbldr_status_t
-    usbdescbldr_make_standard_interface_descriptor(usbdescbldr_context_t * ctx,
+    usbdescbldr_make_standard_interface_descriptor(usbdescbldr_ctx_t * ctx,
     usbdescbldr_item_t * item,
     usbdescbldr_standard_interface_short_form_t * form);
 
@@ -207,7 +241,7 @@ int HelloWorld(void);
 
 
   usbdescbldr_status_t
-    usbdescbldr_make_endpoint_descriptor(usbdescbldr_context_t * ctx,
+    usbdescbldr_make_endpoint_descriptor(usbdescbldr_ctx_t * ctx,
     usbdescbldr_item_t * item,
     usbdescbldr_endpoint_short_form_t * form);
 
@@ -220,7 +254,7 @@ int HelloWorld(void);
   } usbdescbldr_ss_ep_companion_short_form_t;
 
   usbdescbldr_status_t
-    usbdescbldr_make_ss_ep_companion_descriptor(usbdescbldr_context_t * ctx,
+    usbdescbldr_make_ss_ep_companion_descriptor(usbdescbldr_ctx_t * ctx,
     usbdescbldr_item_t * item,
     usbdescbldr_ss_ep_companion_short_form_t * form);
 
@@ -236,9 +270,22 @@ int HelloWorld(void);
   } usbdescbldr_iad_short_form_t;
 
   usbdescbldr_status_t
-    usbdescbldr_make_interface_association_descriptor(usbdescbldr_context_t * ctx,
+    usbdescbldr_make_interface_association_descriptor(usbdescbldr_ctx_t * ctx,
     usbdescbldr_item_t * item,
     usbdescbldr_iad_short_form_t * form);
+
+
+  usbdescbldr_status_t
+    usbdescbldr_make_video_control_interface_descriptor(usbdescbldr_ctx_t * ctx,
+    usbdescbldr_item_t * item,
+    usbdescbldr_standard_interface_short_form_t * form);
+
+
+  usbdescbldr_status_t
+    usbdescbldr_make_vc_cs_interface_descriptor(usbdescbldr_ctx_t * ctx,
+    usbdescbldr_item_t * item,
+    unsigned int dwClockFrequency
+    );
 
 #ifdef __cplusplus
 }

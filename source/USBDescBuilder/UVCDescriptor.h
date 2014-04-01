@@ -9,12 +9,12 @@
 struct uvc_if_assoc_desc:
   usb_descriptor_header
 {
-  BYTE bFirstInterface;
-  BYTE bInterfaceCount;
-  BYTE bFunctionClass;
-  BYTE bFunctionSubClass;
-  BYTE bFunctionProtocol;
-  BYTE iFunction;
+  uint8_t bFirstInterface;
+  uint8_t bInterfaceCount;
+  uint8_t bFunctionClass;
+  uint8_t bFunctionSubClass;
+  uint8_t bFunctionProtocol;
+  uint8_t iFunction;
 };
 
 /// <summary>
@@ -47,20 +47,20 @@ static_assert(sizeof(uvc_vc_descriptor_header) == 3, "VC interface descriptor he
 struct uvc_vc_if_hdr_desc:
   uvc_vc_descriptor_header
 {
-  WORD bcdUVC;
-  WORD wTotalLength;
-  DWORD dwClockFrequency;
-  BYTE bInCollection;
-  BYTE baInterfaceNr[1];
+  uint16_t bcdUVC;
+  uint16_t wTotalLength;
+  uint32_t dwClockFrequency;
+  uint8_t bInCollection;
+  uint8_t baInterfaceNr[1];
 };
 
 struct uvc_input_terminal_desc:
   uvc_vc_descriptor_header
 {
-  BYTE bTerminalID;
-  WORD wTerminalType;
-  BYTE bAssocTerminal;
-  BYTE iTerminal;
+  uint8_t bTerminalID;
+  uint16_t wTerminalType;
+  uint8_t bAssocTerminal;
+  uint8_t iTerminal;
 };
 
 struct uvc_input_terminal_uncompressed_desc:
@@ -71,10 +71,10 @@ struct uvc_input_terminal_uncompressed_desc:
 struct uvc_processing_unit_desc:
   uvc_vc_descriptor_header
 {
-  BYTE bUnitID;
-  BYTE bSourceID;
-  WORD wMaxMultiplier;
-  BYTE bControlSize;
+  uint8_t bUnitID;
+  uint8_t bSourceID;
+  uint16_t wMaxMultiplier;
+  uint8_t bControlSize;
   struct {
     unsigned char Brightness:1;
     unsigned char Contrast:1;
@@ -103,7 +103,7 @@ static_assert(sizeof(uvc_processing_unit_desc) == 11, "Short unit descriptor not
 struct uvc_processing_unit_desc_full:
   uvc_processing_unit_desc
 {
-  BYTE iProcessing;
+  uint8_t iProcessing;
   struct {
     unsigned char None:1;
     unsigned char NTSC525:1;
@@ -123,16 +123,16 @@ enum uvc_vc_frame_interval_type: char {
 struct uvc_vc_frame_uncompressed:
   uvc_vc_descriptor_header
 {
-  BYTE bFrameIndex;
+  uint8_t bFrameIndex;
   struct {
     unsigned char IsStillImageSupported:1;
     unsigned char IsFixedFrameRate:1;
     unsigned char:6;
   } bmCapabilities;
-  WORD wWidth;
-  WORD wHeight;
-  DWORD dwMinBitRate;
-  DWORD dwMaxBitRate;
+  uint16_t wWidth;
+  uint16_t wHeight;
+  uint32_t dwMinBitRate;
+  uint32_t dwMaxBitRate;
   unsigned int:32;
   t_tenthUS dwDefaultFrameInterval;
   uvc_vc_frame_interval_type bFrameIntervalType;
@@ -181,14 +181,14 @@ static_assert(sizeof(uvc_vs_descriptor_header) == 3, "VS interface descriptor he
 struct uvc_vs_input_header:
   uvc_vs_descriptor_header
 {
-  BYTE bNumFormats;
-  WORD wTotalLength;
-  BYTE bEndpointAddress;
-  BYTE bmInfo;
-  BYTE bTerminalLink;
-  BYTE bStillCaptureMethod;
-  BYTE bTriggerSupport;
-  BYTE bTriggerUsage;
+  uint8_t bNumFormats;
+  uint16_t wTotalLength;
+  uint8_t bEndpointAddress;
+  uint8_t bmInfo;
+  uint8_t bTerminalLink;
+  uint8_t bStillCaptureMethod;
+  uint8_t bTriggerSupport;
+  uint8_t bTriggerUsage;
 };
 
 enum uvc_vc_uncompressed_frame_pattern: char {
@@ -200,13 +200,13 @@ enum uvc_vc_uncompressed_frame_pattern: char {
 struct uvc_vs_format_uncompressed:
   uvc_vs_descriptor_header
 {
-  BYTE bFormatIndex;
-  BYTE bNumFrameDescriptors;
+  uint8_t bFormatIndex;
+  uint8_t bNumFrameDescriptors;
   GUID guidFormat;
-  BYTE bBitsPerPixel;
-  BYTE bDefaultFrameIndex;
-  BYTE bAspectRatioX;
-  BYTE bAspectRatioY;
+  uint8_t bBitsPerPixel;
+  uint8_t bDefaultFrameIndex;
+  uint8_t bAspectRatioX;
+  uint8_t bAspectRatioY;
   struct {
     unsigned char IsInterlaced:1;
     unsigned char UseTwoFieldsPerFrame:1;
@@ -215,7 +215,7 @@ struct uvc_vs_format_uncompressed:
     uvc_vc_uncompressed_frame_pattern FieldPattern:2;
     unsigned char:2;
   } bmInterlaceFlags;
-  BYTE bCopyProtect;
+  uint8_t bCopyProtect;
 };
 static_assert(sizeof(uvc_vs_format_uncompressed) == 27, "Format structure size mismatch");
 
@@ -223,19 +223,19 @@ struct uvc_xu_descriptor_header:
   uvc_vc_descriptor_header
 {
   // Unique identifier for this unit
-  BYTE bUnitID;
+  uint8_t bUnitID;
 
   // Extension unit GUID
   GUID guidExtensionCode;
 
   // Number of controls in this unit
-  BYTE bNumControls;
+  uint8_t bNumControls;
 
   // Number of input pins
-  BYTE bNrInPins;
+  uint8_t bNrInPins;
 
   // Input terminal identifiers
-  BYTE inTerminalIDs[1];
+  uint8_t inTerminalIDs[1];
 };
 static_assert(offsetof(uvc_xu_descriptor_header, bUnitID) == 3, "Unit identifer offset incorrect");
 

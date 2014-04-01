@@ -1,8 +1,13 @@
 #pragma once
-#include <winusb.h>
+#include <stdint.h>
+
+#ifndef __cplusplus
+#define static_assert(cond,message) /* elide for now */
+#endif // __cplusplus
+
 
 //! Class-specific USB descriptor types.
-enum USB_DESC_TYPE : char
+enum
 {
   USB_DEVICE        = 0x01,
   USB_CONFIGURATION = 0x02,
@@ -17,9 +22,10 @@ enum USB_DESC_TYPE : char
 	UVC_CS_STRING			= 0x23,
 	UVC_CS_INTERFACE		= 0x24,
 	UVC_CS_ENDPOINT			= 0x25,
- UVC_COMPANION  = 0x30,
+  UVC_COMPANION  = 0x30,
   USB_DESC_TYPE_LAST
-};
+} _USB_DESC_TYPE;
+typedef unsigned char USB_DESC_TYPE;
 
 //! bmRequest.Dir
 typedef enum _BMREQUEST_DIR
@@ -58,35 +64,39 @@ typedef enum _BMREQUEST_RECIPIENT
 } BMREQUEST_RECIPIENT;
 
 //! Standard USB descriptor types. For more information, see section 9-5 of the USB 3.0 specifications.
-typedef enum _USB_DESCRIPTOR_TYPE
+enum _USB_DESCRIPTOR_TYPE
 {
-    //! Device descriptor type.
-    USB_DESCRIPTOR_TYPE_DEVICE = 0x01,
+  //! Device descriptor type.
+  USB_DESCRIPTOR_TYPE_DEVICE = 0x01,
 
-    //! Configuration descriptor type.
-    USB_DESCRIPTOR_TYPE_CONFIGURATION = 0x02,
+  //! Configuration descriptor type.
+  USB_DESCRIPTOR_TYPE_CONFIGURATION = 0x02,
 
-    //! String descriptor type.
-    USB_DESCRIPTOR_TYPE_STRING = 0x03,
+  //! String descriptor type.
+  USB_DESCRIPTOR_TYPE_STRING = 0x03,
 
-    //! Interface descriptor type.
-    USB_DESCRIPTOR_TYPE_INTERFACE = 0x04,
+  //! Interface descriptor type.
+  USB_DESCRIPTOR_TYPE_INTERFACE = 0x04,
 
-    //! Endpoint descriptor type.
-    USB_DESCRIPTOR_TYPE_ENDPOINT = 0x05,
+  //! Endpoint descriptor type.
+  USB_DESCRIPTOR_TYPE_ENDPOINT = 0x05,
 
-    //! Device qualifier descriptor type.
-    USB_DESCRIPTOR_TYPE_DEVICE_QUALIFIER = 0x06,
+  //! Device qualifier descriptor type.
+  USB_DESCRIPTOR_TYPE_DEVICE_QUALIFIER = 0x06,
 
-    //! Config power descriptor type.
-    USB_DESCRIPTOR_TYPE_CONFIG_POWER = 0x07,
+  //! Config power descriptor type.
+  USB_DESCRIPTOR_TYPE_CONFIG_POWER = 0x07,
 
-    //! Interface power descriptor type.
-    USB_DESCRIPTOR_TYPE_INTERFACE_POWER = 0x08,
+  //! Interface power descriptor type.
+  USB_DESCRIPTOR_TYPE_INTERFACE_POWER = 0x08,
 
-    //! Interface association descriptor type.
-    USB_DESCRIPTOR_TYPE_INTERFACE_ASSOCIATION = 0x0B,
-} USB_DESCRIPTOR_TYPE;
+  //! Interface association descriptor type.
+  USB_DESCRIPTOR_TYPE_INTERFACE_ASSOCIATION = 0x0B,
+
+  //! Interface association descriptor type.
+  USB_DESCRIPTOR_TYPE_BOS = 0x30, // XXX: NOT CERTAIN ON THIS ONE
+};
+typedef unsigned char USB_DESCRIPTOR_TYPE;
 
 
 #pragma pack(push, 1)
@@ -103,138 +113,78 @@ struct USB_SETUP_PACKET
   unsigned Length:16;
 };
 
-static_assert(sizeof(USB_SETUP_PACKET) == 8, "Setup packet is required to be exactly eight bytes, by spec");
+static_assert(sizeof(struct USB_SETUP_PACKET) == 8, "Setup packet is required to be exactly eight uint8_ts, by spec");
 
-struct usb_descriptor_header {
-  BYTE bLength;
+struct _usb_descriptor_header {
+  uint8_t          bLength;
   USB_DESC_TYPE bDescriptorType;
 };
-static_assert(sizeof(usb_descriptor_header) == 2, "Invalid USB descriptor header size");
+typedef struct _usb_descriptor_header USB_DESCRIPTOR_HEADER;
 
-enum USB_CC: char {
+static_assert(sizeof(USB_DESCRIPTOR_HEADER) == 2, "Invalid USB descriptor header size");
+
+enum _USB_CC {
   USB_CC_VIDEO = 0x0E
 };
+typedef unsigned char USB_CC;
 
 /** Video interface subclass code (A.2) */
-enum uvc_int_subclass_code:char {
+enum _uvc_int_subclass_code {
 	UVC_SC_UNDEFINED = 0x00,
 	UVC_SC_VIDEOCONTROL = 0x01,
 	UVC_SC_VIDEOSTREAMING = 0x02,
 	UVC_SC_VIDEO_INTERFACE_COLLECTION = 0x03
 };
+typedef unsigned char uvc_int_subclass_code;
 
-struct usb_if_desc:
-  usb_descriptor_header
+struct usb_if_desc
 {
-  BYTE bInterfaceNumber;
-  BYTE bAlternateSetting;
-  BYTE bNumEndpoints;
+  USB_DESCRIPTOR_HEADER header;
+  uint8_t bInterfaceNumber;
+  uint8_t bAlternateSetting;
+  uint8_t bNumEndpoints;
   USB_CC bInterfaceClass;
   union {
     uvc_int_subclass_code bUvcInterfaceSubClass;
   };
-  BYTE bInterfaceProtocol;
-  BYTE iInterface;
+  uint8_t bInterfaceProtocol;
+  uint8_t iInterface;
 };
-static_assert(sizeof(usb_if_desc) == 9, "VC Interface Descriptor size mismatch");
+static_assert(sizeof(struct usb_if_desc) == 9, "VC Interface Descriptor size mismatch");
 
-enum EndpointTransferType : char {
+enum _EndpointTransferType {
   TransferTypeUnknown = 0,
   TransferTypeIso = 1,
   TransferTypeBulk = 2,
   TransferTypeInterrupt = 3
 };
+typedef unsigned char EndpointTransferType;
 
-enum EndpointSyncType : char {
+enum _EndpointSyncType {
   SyncTypeNone = 0,
   SyncTypeAsynch = 1,
   SyncTypeSync = 2
 };
+typedef unsigned char EndpointSyncType;
 
-enum EndpointDirection : char {
+enum _EndpointDirection {
   EndpointDirectionOut = 0,
   EndpointDirectionIn = 1
 };
+typedef unsigned char EndpointDirection;
 
-struct usb_endpoint:
-  usb_descriptor_header
+struct usb_endpoint
 {
-  unsigned char EndpointNumber:4;
+  USB_DESCRIPTOR_HEADER header;
+  unsigned char EndpointNumber : 4;
   unsigned char:3;
   EndpointDirection EndpointDirection:1;
   EndpointTransferType TransferType:2;
   EndpointSyncType SyncType:2;
   unsigned char:0;
-  WORD wMaxPacketSize;
-  BYTE bInterval;
+  uint16_t wMaxPacketSize;
+  uint8_t bInterval;
 };
-static_assert(sizeof(usb_endpoint) == 7, "Endpoint descriptor size mismatch");
-
-/// <summary>
-/// Common enumerator specification:
-/// </summary>
-/// <remarks>
-/// It's generally safe to reinterpret-cast pointers of this type to pointers of related types.  The
-/// sizes and layouts of all descriptor_iterator instances is guaranteed to be consistent.
-/// </remarks>
-template<class T>
-class descriptor_iterator {
-public:
-  static_assert(std::is_same<void*, T>::value || std::is_base_of<usb_descriptor_header, T>::value, "T is not a usb descriptor type");
-
-  /// <summary>
-  /// Trivial constructor which creates a new iterator starting at some basis up to some extent
-  /// </summary>
-  descriptor_iterator(const T* ptr, size_t size):
-    m_ptr(ptr),
-    m_end((char*)m_ptr + size)
-  {
-    static_assert(sizeof(*this) == sizeof(descriptor_iterator<void*>), "Descriptor iterator has a non-compliant size");
-  }
-
-protected:
-  const T* m_ptr;
-  const char* m_end;
-
-  template<class T>
-  friend class descriptor_iterator;
-
-public:
-  /// <summary>
-  /// Reinterprets the bound pointer as the specified type
-  /// </summary>
-  template<class W>
-  const W*const& as(void) const {return (W*&)m_ptr;}
-
-  template<class F>
-  operator descriptor_iterator<F>&(void) {
-    return *(descriptor_iterator<F>*)this;
-  }
-
-  descriptor_iterator& operator++(void) {return (char*&)m_ptr += m_ptr->bLength, *this;}
-
-  const T* operator->(void) const {
-    // Trivial bounds check:
-    assert((char*)&m_ptr[1] <= m_end);
-    return m_ptr;
-  }
-
-  const T& operator*(void) const {return **this;}
-  operator bool(void) const {return (char*)m_ptr < m_end;}
-  operator const T*const&(void) const {return m_ptr;}
-};
-
-template<>
-class descriptor_iterator<USB_CONFIGURATION_DESCRIPTOR>:
-  public descriptor_iterator<usb_descriptor_header>
-{
-public:
-  descriptor_iterator(const USB_CONFIGURATION_DESCRIPTOR& desc):
-    descriptor_iterator<usb_descriptor_header>(
-      (const usb_descriptor_header*)&desc,
-      desc.wTotalLength
-    )
-  {}
-};
+static_assert(sizeof(struct usb_endpoint) == 7, "Endpoint descriptor size mismatch");
 
 #pragma pack(pop)
