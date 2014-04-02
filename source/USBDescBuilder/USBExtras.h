@@ -148,8 +148,42 @@ typedef struct _USB_UVC_VC_INPUT_TERMINAL
   uint8_t  bmControls[3];              // Not used?
 } USB_UVC_VC_INPUT_TERMINAL;
 
+// Camera terminal
+typedef struct _USB_UVC_CAMERA_TERMINAL
+{
+  USB_DESCRIPTOR_HEADER header;
+  uint8_t  bDescriptorSubType;       //0x02
+  uint8_t  bTerminalID;
+  uint16_t wTerminalType;
+  uint8_t  bAssocTerminal;
+  uint8_t  iTerminal;
+  uint16_t wObjectiveFocalLengthMin;
+  uint16_t wObjectiveFocalLengthMax;
+  uint16_t wOcularFocalLength;
+  uint8_t  bControlBitfieldSize;
+  uint8_t  bmControls[3];
+} USB_UVC_CAMERA_TERMINAL;
+
+// This next one is a guess obtained from a MacOS camera descriptor
+static const uint16_t USB_UVC_ITT_CAMERA = 0x0201;
+
+
+// Selector unit
+typedef struct _USB_UVC_VC_SELECTOR_UNIT
+{
+  USB_DESCRIPTOR_HEADER header;
+  uint8_t  bDescriptorSubType;
+  uint8_t  bUnitID;
+  uint8_t  bSourceID;
+  uint16_t wMaxMultiplier;
+  uint8_t  bControlSize;
+  uint8_t  bmControls[3];
+  uint8_t  iTerminal;
+} USB_UVC_VC_SELECTOR_UNIT;
+
+
 // Processing unit
-typedef struct _USB_UVC_VC_PROCESSING_UNIT           //TODO: does not parse??? Chen
+typedef struct _USB_UVC_VC_PROCESSING_UNIT           //TODO: does not parse??? Chen (was missing bmVid. -wt)
 {
   USB_DESCRIPTOR_HEADER header;
   uint8_t  bDescriptorSubType;       //0x05
@@ -158,7 +192,8 @@ typedef struct _USB_UVC_VC_PROCESSING_UNIT           //TODO: does not parse??? C
   uint16_t wMaxMultiplier;
   uint8_t  bControlSize;
   uint8_t  bmControls[3];
-  uint8_t  iTerminal;
+  uint8_t  iProcessing;
+  uint8_t   bmVideoStandards;
 } USB_UVC_VC_PROCESSING_UNIT;
 
 // Extension unit
@@ -170,10 +205,10 @@ typedef struct _USB_UVC_VC_EXTENSION_UNIT
   GUID     guidExtensionCode;
   uint8_t  bNumControls;
   uint8_t  bNrInPins;
-  uint8_t  baSourceID;
-  uint8_t  bControlSize;
-  uint8_t  bmControls[3];
-  uint8_t  iExtension;
+  //uint8_t  baSourceID;      // Nothing from here on is at a fixed offset.
+  //uint8_t  bControlSize;
+  //uint8_t  bmControls[3];
+  //uint8_t  iExtension;
 } USB_UVC_VC_EXTENSION_UNIT;
 
 // Output terminal
@@ -296,7 +331,8 @@ typedef struct _USB_SS_CONFIGURATION_PROCESS
 } USB_SS_CONFIGURATION_PROCESS;
 
 
-#define USB_DESCRIPTOR_TYPE_SS_EP_COMPANION 0x30
+// This needs a better home:
+static const uint8_t USB_DESCRIPTOR_TYPE_SS_EP_COMPANION = 0x30;
 
 
 // Class-specific headers take the extra subtype:
@@ -307,6 +343,15 @@ typedef struct _USB_CS_DESCRIPTOR_HEADER {
 } USB_CS_DESCRIPTOR_HEADER;
 
 
+typedef struct _USB_VC_CS_INTERFACE_DESCRIPTOR
+{
+  USB_CS_DESCRIPTOR_HEADER header;
+  uint16_t  bcdUVC;
+  uint16_t  wTotalLength;
+  uint32_t  dwClockFrequency;
+  uint8_t   bInCollection;
+  // uint8_t   baInterfaceNr[0];               // Must be 'grown' at build time
+} USB_VC_CS_INTERFACE_DESCRIPTOR;
 
 
 // A.1
@@ -340,15 +385,6 @@ static const uint8_t USB_INTERFACE_SUBTYPE_VC_PROCESSING_UNIT = 0x05;
 static const uint8_t USB_INTERFACE_SUBTYPE_VC_EXTENSION_UNIT = 0x06;
 static const uint8_t USB_INTERFACE_SUBTYPE_VC_ENCODING_UNIT = 0x07;
 
-typedef struct _USB_VC_CS_INTERFACE_DESCRIPTOR
-{
-  USB_CS_DESCRIPTOR_HEADER header;
-  uint16_t  bcdUVC;
-  uint16_t  wTotalLength;
-  uint32_t  dwClockFrequency;
-  uint8_t   bInCollection;
-  // uint8_t   baInterfaceNr[0];               // Must be 'grown' at build time
-} USB_VC_CS_INTERFACE_DESCRIPTOR;
 
 // A.6
 static const uint8_t USB_INTERFACE_SUBTYPE_VS_UNDEFINED = 0x00;
@@ -375,5 +411,6 @@ static const uint8_t USB_VC_SUBTYPE_EP_UNDEFINEDEP_GENERAL = 0x01;
 static const uint8_t USB_VC_SUBTYPE_EP_UNDEFINEDEP_ENDPOINT = 0x02;
 static const uint8_t USB_VC_SUBTYPE_EP_UNDEFINEDEP_INTERRUPT = 0x03;
 
+// USB_UVC_ITT_CAMERA
 
 #pragma pack(pop)

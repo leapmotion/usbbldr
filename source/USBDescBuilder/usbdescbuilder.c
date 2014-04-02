@@ -283,7 +283,7 @@ usbdescbldr_make_device_descriptor(usbdescbldr_ctx_t *ctx,
   USB_DEVICE_DESCRIPTOR *dest;
   uint16_t tShort;
 
-  if(form == NULL)
+  if(form == NULL || ctx == NULL || item == NULL)
     return USBDESCBLDR_INVALID;
 
   // This item has a fixed length; check for 'fit'
@@ -350,7 +350,7 @@ usbdescbldr_make_device_qualifier_descriptor(usbdescbldr_ctx_t * ctx,
   USB_DEVICE_QUALIFIER_DESCRIPTOR *dest;
   uint16_t tShort;
 
-  if (form == NULL)
+  if(form == NULL || ctx == NULL || item == NULL)
     return USBDESCBLDR_INVALID;
 
   // This item has a fixed length; check for 'fit'
@@ -417,7 +417,7 @@ usbdescbldr_device_configuration_short_form_t * form)
 {
   USB_CONFIGURATION_DESCRIPTOR *dest;
 
-  if(form == NULL)
+  if(form == NULL || item == NULL || index == NULL)
     return USBDESCBLDR_INVALID;
 
   // This item has a fixed length; check for 'fit'
@@ -467,7 +467,7 @@ Hence, this must be performed before any other string descriptors are
 made.
 \param [in] ctx The Builder context.
 \param [in,out] The item resulting from this request.
-\param [in] ... The Language IDs (passed as ints). This list MUST be terminated with 0.
+\param [in] ... The Language IDs (passed as ints). This list MUST be terminated with USBDESCBLDR_LIST_END.
 */
 usbdescbldr_status_t
 usbdescbldr_make_languageIDs(usbdescbldr_ctx_t *ctx,
@@ -481,6 +481,9 @@ usbdescbldr_make_languageIDs(usbdescbldr_ctx_t *ctx,
   unsigned char *     drop;
   USB_STRING_DESCRIPTOR *dest = (USB_STRING_DESCRIPTOR *)ctx->append;
 
+  if(ctx == NULL || item == NULL)
+    return USBDESCBLDR_INVALID;
+
   // There may only be one (this is string index zero..)
   if(ctx->i_string != 0)
     return USBDESCBLDR_TOO_MANY;
@@ -488,24 +491,25 @@ usbdescbldr_make_languageIDs(usbdescbldr_ctx_t *ctx,
   va_start(va_do, item);      // One copy for work
   va_copy(va_count, va_do);   // .. one copy just to count
 
-  // Count args until the null-terminator
-  langs = 0;
-  do {
-    lang = (uint16_t) va_arg(va_count, unsigned int);
-    if(lang != 0) langs++;
-  } while(lang != 0);
+  // Count args until the terminator
+  for(langs = 0; va_arg(va_count, uint32_t) != USBDESCBLDR_LIST_END; langs++)
+    ;
   va_end(va_count);
 
   // Now we know our length
   needs = sizeof(*dest) + langs * sizeof(lang);
 
   // Bounds check
-  if(needs > 0xff)
+  if(needs > 0xff) {
+    va_end(va_do);
     return USBDESCBLDR_OVERSIZED;
+  }
 
   // If not dry-run, be sure we can write
-  if(ctx->buffer != NULL && _bufferAvailable(ctx) < needs)
+  if(ctx->buffer != NULL && _bufferAvailable(ctx) < needs) {
+    va_end(va_do);
     return USBDESCBLDR_NO_SPACE;
+  }
 
   // Continue construction
   if(ctx->buffer != NULL) {
@@ -514,7 +518,8 @@ usbdescbldr_make_languageIDs(usbdescbldr_ctx_t *ctx,
 
     // In Strings, the string unichars immediately follow the header
     drop = ((unsigned char *) dest) + sizeof(USB_DESCRIPTOR_HEADER);
-    while((lang = (uint16_t) va_arg(va_do, unsigned int)) != 0) {
+    for(; langs > 0; langs--) {
+      lang = (uint16_t) va_arg(va_do, unsigned int);
       lang = ctx->fHostToLittleShort(lang);
       memcpy(drop, &lang, sizeof(lang));
       drop += sizeof(lang);
@@ -558,7 +563,7 @@ usbdescbldr_make_string_descriptor(usbdescbldr_ctx_t *ctx,
   unsigned char *drop, *ascii;
   uint16_t wchar;
 
-  if( string == NULL)
+  if(string == NULL || ctx == NULL || item == NULL)
     return USBDESCBLDR_INVALID;
 
   // String indices are bytes, limiting the number of them:
@@ -615,7 +620,9 @@ usbdescbldr_make_bos_descriptor(usbdescbldr_ctx_t * ctx,
                                 usbdescbldr_item_t * item)
 {
   USB_BOS_DESCRIPTOR *dest;
-
+  if(ctx == NULL || item == NULL)
+    return USBDESCBLDR_INVALID;
+  
   // There can only be one of these -- add check
 
   // Check space
@@ -666,7 +673,7 @@ usbdescbldr_make_standard_interface_descriptor(usbdescbldr_ctx_t * ctx,
   USB_INTERFACE_DESCRIPTOR *dest;
   size_t needs;
 
-  if(form == NULL)
+  if(form == NULL || ctx == NULL || item == NULL)
     return USBDESCBLDR_INVALID;
 
   // Config indicies are uint8_tas, limiting the number of them:
@@ -718,7 +725,7 @@ usbdescbldr_make_endpoint_descriptor(usbdescbldr_ctx_t * ctx,
   uint16_t tShort;
   size_t needs;
 
-  if(form == NULL)
+  if(form == NULL || ctx == NULL || item == NULL)
     return USBDESCBLDR_INVALID;
 
   // Config indicies are uint8_tas, limiting the number of them:
@@ -770,7 +777,7 @@ usbdescbldr_ss_ep_companion_short_form_t * form)
   uint16_t tShort;
   size_t needs;
 
-  if(form == NULL)
+  if(form == NULL || ctx == NULL || item == NULL)
     return USBDESCBLDR_INVALID;
 
   // This has a fixed length, so check up front
@@ -814,7 +821,7 @@ usbdescbldr_make_interface_association_descriptor(usbdescbldr_ctx_t * ctx,
   USB_INTERFACE_ASSOCIATION_DESCRIPTOR *dest;
   size_t needs;
 
-  if(form == NULL)
+  if(form == NULL || ctx == NULL || item == NULL)
     return USBDESCBLDR_INVALID;
 
   // This has a fixed length, so check up front
@@ -872,13 +879,14 @@ usbdescbldr_standard_interface_short_form_t * form)
 
 // The VC CS Interface Header Descriptor. It is treated as a header for 
 // numerous items that will follow it once built. The header itself has
-// a variable number of interfaces at the end, which won't be known
-// until the interfaces are added.
+// a variable number of interfaces at the end, which are given by their
+// interface numbers in a list, terminated with USBDESCBNLDR_END_LIST .
 
 usbdescbldr_status_t
 usbdescbldr_make_vc_cs_interface_descriptor(usbdescbldr_ctx_t * ctx,
 usbdescbldr_item_t * item,
-unsigned int dwClockFrequency
+unsigned int dwClockFrequency,
+... // Terminated List of Interface Numbers 
 )
 {
   USB_VC_CS_INTERFACE_DESCRIPTOR * dest;
@@ -886,18 +894,34 @@ unsigned int dwClockFrequency
   uint16_t tShort;
   uint32_t tInt;
 
-  if(item == NULL)
+  uint8_t   bInCollection;      // Number of interfaces
+  uint8_t * drop;
+  va_list   va, va_count;
+
+  if(ctx == NULL || item == NULL)
     return USBDESCBLDR_INVALID;
 
-  // This has a variable length, so can only enforce the header part
-  needs = sizeof(*dest);
-  if(needs > 0xff)
+  // Determine the final length
+  va_start(va_count, dwClockFrequency);
+  va_copy(va, va_count);
+
+  for(bInCollection = 0; va_arg(va_count, uint32_t) != USBDESCBLDR_LIST_END; bInCollection++)
+    // COULD range-check each interface to be a byte value here
+    ;
+  va_end(va_count);
+
+  needs = sizeof(*dest) + sizeof(uint8_t) * bInCollection;
+  if(needs > 0xff) {
+    va_end(va);
     return USBDESCBLDR_OVERSIZED;  // .. as opposed to NO SPACE ..
+  }
 
   // Construct
   if(ctx->buffer != NULL) {
-    if(needs > _bufferAvailable(ctx))
+    if(needs > _bufferAvailable(ctx)) {
+      va_end(va);
       return USBDESCBLDR_NO_SPACE;
+    }
 
     dest = (USB_VC_CS_INTERFACE_DESCRIPTOR *) ctx->append;
     memset(dest, 0, sizeof(*dest));
@@ -911,6 +935,76 @@ unsigned int dwClockFrequency
 
     tInt = ctx->fHostToLittleInt(dwClockFrequency);
     memcpy(&dest->dwClockFrequency, &tInt, sizeof(dest->dwClockFrequency));
+
+    // Tack on the bInCollection and interface(s)
+    drop = (uint8_t *) & dest + sizeof(dest);
+    *drop++ = bInCollection;
+    for(; bInCollection > 0; bInCollection--)
+      *drop++ = (uint8_t) va_arg(va, uint32_t);
+  }
+  va_end(va);
+
+  // Build the item 
+  _item_init(item);
+  item->size = needs;
+  item->address = ctx->append;
+
+  // Consume buffer space (or just count, in dry run mode)
+  ctx->append += needs;
+
+  return USBDESCBLDR_OK;
+}
+
+
+// The VC Camera Terminal (an Input) Descriptor.
+
+usbdescbldr_status_t
+usbdescbldr_make_camera_terminal_descriptor(usbdescbldr_ctx_t * ctx,
+usbdescbldr_item_t * item,
+usbdescbldr_camera_terminal_short_form_t * form)
+{
+  USB_UVC_CAMERA_TERMINAL *dest;
+  size_t needs;
+  uint32_t t32;
+
+  if(form == NULL || ctx == NULL || item == NULL)
+    return USBDESCBLDR_INVALID;
+
+  needs = sizeof(*dest);
+
+  // Construct
+  if(ctx->buffer != NULL) {
+    if(needs > _bufferAvailable(ctx))
+      return USBDESCBLDR_NO_SPACE;
+
+    dest = (USB_UVC_CAMERA_TERMINAL *) ctx->append;
+    memset(dest, 0, sizeof(*dest));
+
+    dest->header.bLength = needs;
+    dest->header.bDescriptorType = UVC_CS_INTERFACE;
+    dest->bDescriptorSubType = USB_INTERFACE_SUBTYPE_VC_INPUT_TERMINAL;
+
+    dest->bTerminalID = form->bTerminalID;
+
+    t32 = ctx->fHostToLittleShort(USB_UVC_ITT_CAMERA);
+    memcpy(&dest->wTerminalType, &t32, sizeof(dest->wTerminalType));
+
+    dest->bAssocTerminal = form->bAssocTerminal;
+    dest->iTerminal = form->iTerminal;
+
+    t32 = ctx->fHostToLittleShort(form->wObjectiveFocalLengthMin);
+    memcpy(&dest->wObjectiveFocalLengthMin, &t32, sizeof(dest->wObjectiveFocalLengthMin));
+
+    t32 = ctx->fHostToLittleShort(form->wObjectiveFocalLengthMax);
+    memcpy(&dest->wObjectiveFocalLengthMax, &t32, sizeof(dest->wObjectiveFocalLengthMax));
+
+    t32 = ctx->fHostToLittleShort(form->wOcularFocalLength);
+    memcpy(&dest->wOcularFocalLength, &t32, sizeof(dest->wOcularFocalLength));
+
+    // Using t32 as a 3-byte buffer; just don't copy the whole four bytes
+    dest->bControlBitfieldSize = sizeof(dest->bmControls);
+    t32 = ctx->fHostToLittleInt(form->controls);
+    memcpy(&dest->bmControls, &t32, sizeof(dest->bmControls));
   }
 
   // Build the item 
@@ -924,3 +1018,227 @@ unsigned int dwClockFrequency
   return USBDESCBLDR_OK;
 }
 
+
+// The Selector Unit.
+
+usbdescbldr_status_t
+usbdescbldr_make_vc_selector_unit(usbdescbldr_ctx_t * ctx,
+usbdescbldr_item_t * item,
+unsigned int bUnitID,
+... // Terminated List of Input (Source) Pin(s)
+)
+{
+  USB_UVC_VC_SELECTOR_UNIT * dest;
+  size_t needs;
+  uint8_t   bNrInPins;      // Number of inputs
+  uint8_t * drop;
+  va_list   va, va_count;
+
+  if(ctx == NULL || item == NULL)
+    return USBDESCBLDR_INVALID;
+
+  // Determine the final length
+  va_start(va_count, bUnitID);
+  va_copy(va, va_count);
+
+  for(bNrInPins = 0; va_arg(va_count, uint32_t) != USBDESCBLDR_LIST_END; bNrInPins++)
+    // COULD range-check each source to be a byte value here
+    ;
+  va_end(va_count);
+
+  needs = sizeof(*dest) + sizeof(uint8_t) * bNrInPins;
+  if(needs > 0xff) {
+    va_end(va);
+    return USBDESCBLDR_OVERSIZED;  // .. as opposed to NO SPACE ..
+  }
+
+  // Construct
+  if(ctx->buffer != NULL) {
+    if(needs > _bufferAvailable(ctx)) {
+      va_end(va);
+      return USBDESCBLDR_NO_SPACE;
+    }
+
+    dest = (USB_UVC_VC_SELECTOR_UNIT *) ctx->append;
+    memset(dest, 0, sizeof(*dest));
+
+    dest->header.bLength = needs;
+    dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_VC_CS_INTERFACE;
+    dest->bDescriptorSubType = USB_INTERFACE_SUBTYPE_VC_SELECTOR_UNIT;
+
+    dest->bUnitID = bUnitID;
+    
+    // Tack on the bNrInPins and interface(s)
+    drop = (uint8_t *) & dest + sizeof(dest);
+    *drop++ = bNrInPins;
+    for(; bNrInPins > 0; bNrInPins--)
+      *drop++ = (uint8_t) va_arg(va, uint32_t);
+  }
+  va_end(va);
+
+  // Build the item 
+  _item_init(item);
+  item->size = needs;
+  item->address = ctx->append;
+
+  // Consume buffer space (or just count, in dry run mode)
+  ctx->append += needs;
+
+  return USBDESCBLDR_OK;
+}
+
+
+
+
+// The Processor Unit.
+
+usbdescbldr_status_t
+usbdescbldr_make_vc_processor_unit(usbdescbldr_ctx_t * ctx,
+usbdescbldr_item_t * item,
+usbdescbldr_vc_processor_unit_short_form * form)
+{
+  USB_UVC_VC_PROCESSING_UNIT * dest;
+  size_t needs;
+   uint32_t t32;
+   uint16_t t16;
+
+  if(ctx == NULL || form == NULL || item == NULL)
+    return USBDESCBLDR_INVALID;
+
+  needs = sizeof(*dest);
+
+  // Construct
+  if(ctx->buffer != NULL) {
+    if(needs > _bufferAvailable(ctx))
+      return USBDESCBLDR_NO_SPACE;
+
+    dest = (USB_UVC_VC_PROCESSING_UNIT *) ctx->append;
+    memset(dest, 0, sizeof(*dest));
+
+    dest->header.bLength = needs;
+    dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_VC_CS_INTERFACE;
+    dest->bDescriptorSubType = USB_INTERFACE_SUBTYPE_VC_PROCESSING_UNIT;
+
+    dest->bUnitID = form->bUnitID;
+    dest->bSourceID = form->bSourceID;
+
+    t16 = ctx->fHostToLittleShort(form->wMaxMultiplier);
+    memcpy(&dest->wMaxMultiplier, &t16, sizeof(dest->wMaxMultiplier));
+
+    dest->bControlSize = sizeof(dest->bmControls);
+    t32 = ctx->fHostToLittleInt(form->controls);
+    memcpy(&dest->bmControls, &t32, sizeof(dest->bmControls));
+
+    dest->iProcessing = form->iProcessing;
+    dest->bmVideoStandards = form->bmVideoStandards;
+  }
+
+  // Build the item 
+  _item_init(item);
+  item->size = needs;
+  item->address = ctx->append;
+
+  // Consume buffer space (or just count, in dry run mode)
+  ctx->append += needs;
+
+  return USBDESCBLDR_OK;
+}
+
+
+
+usbdescbldr_status_t
+usbdescbldr_make_extension_unit_descriptor(usbdescbldr_ctx_t * ctx,
+usbdescbldr_item_t * item,
+usbdescbldr_vc_extension_unit_short_form_t * form,
+...)
+{
+  USB_UVC_VC_EXTENSION_UNIT * dest;
+  size_t needs;
+  uint8_t   bNrInPins;      // Number of inputs
+  uint8_t * drop;
+  va_list   va, va_count;
+  GUID      tGUID;
+
+  if(item == NULL)
+    return USBDESCBLDR_INVALID;
+
+  // Determine the final length
+  va_start(va_count, form);
+  va_copy(va, va_count);
+
+  for(bNrInPins = 0; va_arg(va_count, uint32_t) != USBDESCBLDR_LIST_END; bNrInPins++)
+    // COULD range-check each source to be a byte value here
+    ;
+  va_end(va_count);
+
+  // A complex structure, with multiple varying-size fields *and* fixed-sized
+  // ones intermingled among them.
+  needs = sizeof(*dest);                  // Prefix of fixed-size fields
+  needs += sizeof(uint8_t) * bNrInPins;   // baSourceID
+  needs += sizeof(uint8_t);               // bControlSize
+  needs += form->bControlSize;            // bmControls
+  needs += sizeof(uint8_t);               // iExtension
+
+  if(needs > 0xff) {
+    va_end(va);
+    return USBDESCBLDR_OVERSIZED;  // .. as opposed to NO SPACE ..
+  }
+
+  // Construct
+  if(ctx->buffer != NULL) {
+    if(needs > _bufferAvailable(ctx)) {
+      va_end(va);
+      return USBDESCBLDR_NO_SPACE;
+    }
+
+    dest = (USB_UVC_VC_EXTENSION_UNIT *) ctx->append;
+    memset(dest, 0, sizeof(*dest));
+
+    dest->header.bLength = needs;
+    dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_VC_CS_INTERFACE;
+    dest->bDescriptorSubType = USB_INTERFACE_SUBTYPE_VC_EXTENSION_UNIT;
+
+    dest->bUnitID = form->bUnitID;
+    // Note that GUID is actually:
+    // dwData1  uint32_t
+    // dwData2  uint16_t
+    // dwData3  uint16_t
+    // dwData4  uint8[8]
+    tGUID.dwData1 = ctx->fHostToLittleInt(form->guidExtensionCode.dwData1);
+    tGUID.dwData2 = ctx->fHostToLittleInt(form->guidExtensionCode.dwData2);
+    tGUID.dwData3 = ctx->fHostToLittleInt(form->guidExtensionCode.dwData3);
+    memcpy(&tGUID.dwData4, form->guidExtensionCode.dwData4, sizeof(tGUID.dwData4));
+    memcpy(&dest->guidExtensionCode, &tGUID, sizeof(dest->guidExtensionCode));
+
+    dest->bNumControls = form->bNumControls;
+    dest->bNrInPins = bNrInPins;
+
+    drop = (uint8_t *) & dest + sizeof(dest);
+
+    // Tack on the sources(s): baSourceID
+    *drop++ = bNrInPins;
+    for(; bNrInPins > 0; bNrInPins--)
+      *drop++ = (uint8_t) va_arg(va, uint32_t);
+
+    // bControlSize
+    *drop++ = form->bControlSize;
+
+    // bmControls
+    memcpy(drop, form->bmControls, form->bControlSize);
+    drop += form->bControlSize;
+
+    // iExtension
+    *drop++ = form->iExtension;
+  }
+  va_end(va);
+
+  // Build the item 
+  _item_init(item);
+  item->size = needs;
+  item->address = ctx->append;
+
+  // Consume buffer space (or just count, in dry run mode)
+  ctx->append += needs;
+
+  return USBDESCBLDR_OK;
+}

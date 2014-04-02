@@ -14,6 +14,7 @@ extern "C" {
 #endif
 
 #include <stdint.h>
+#include "USBExtras.h"
 
 int HelloWorld(void);
 
@@ -51,6 +52,15 @@ typedef struct usbdescbldr_ctx_s {
     USBDESCBLDR_TOO_MANY,         // Exceeds instance count limit
     // ...
   } usbdescbldr_status_t;
+
+  // The maker functions which accept a variable number of
+  // arguments need a special value to terminate the list.
+  // (It's this, or make people count their arguments manually.)
+  // Since zero can be a common value to pass, zero makes a poor
+  // terminator. We choose a value which cannot be represented as
+  // a uint8_t or uint16_t and which should be unlikely
+  // as a DWORD (uint32_t) value in a descriptor.
+  static const uint32_t USBDESCBLDR_LIST_END = 0xee00eeee;
 
   // The 'handle' by which callers store the results of maker calls. Callers
   // 'know' this structure only to provide them as return (out) parameters;
@@ -284,8 +294,75 @@ typedef struct usbdescbldr_ctx_s {
   usbdescbldr_status_t
     usbdescbldr_make_vc_cs_interface_descriptor(usbdescbldr_ctx_t * ctx,
     usbdescbldr_item_t * item,
-    unsigned int dwClockFrequency
+    unsigned int dwClockFrequency,
+    ... // Terminated List of Interface Numbers 
     );
+
+
+  typedef struct {
+    uint8_t  bTerminalID;
+    uint8_t  bAssocTerminal;
+    uint8_t  iTerminal;
+    uint16_t wObjectiveFocalLengthMin;
+    uint16_t wObjectiveFocalLengthMax;
+    uint16_t wOcularFocalLength;
+    uint32_t controls;
+  } usbdescbldr_camera_terminal_short_form_t;
+
+  // The VC Camera Terminal (an Input) Descriptor.
+
+  usbdescbldr_status_t
+    usbdescbldr_make_camera_terminal_descriptor(usbdescbldr_ctx_t * ctx,
+    usbdescbldr_item_t * item,
+    usbdescbldr_camera_terminal_short_form_t * form);
+
+
+
+
+  usbdescbldr_status_t
+    usbdescbldr_make_vc_selector_unit(usbdescbldr_ctx_t * ctx,
+    usbdescbldr_item_t * item,
+    unsigned int bUnitID,
+    ... // Terminated List of Input (Source) Pin(s)
+    );
+
+
+
+
+  typedef struct
+  {
+    uint8_t  bUnitID;
+    uint8_t  bSourceID;
+    uint16_t wMaxMultiplier;
+    uint32_t  controls;
+    uint8_t   iProcessing;
+    uint8_t   bmVideoStandards;
+  } usbdescbldr_vc_processor_unit_short_form;
+
+  usbdescbldr_status_t
+    usbdescbldr_make_vc_processor_unit(usbdescbldr_ctx_t * ctx,
+    usbdescbldr_item_t * item,
+    usbdescbldr_vc_processor_unit_short_form * form);
+
+  
+  typedef struct
+  {
+    uint8_t  bUnitID;
+    GUID     guidExtensionCode;
+    uint8_t  bNumControls;
+    uint8_t  bNrInPins;
+    uint8_t  baSourceID;
+    uint8_t  bControlSize;
+    uint8_t * bmControls;
+    uint8_t  iExtension;
+  } usbdescbldr_vc_extension_unit_short_form_t;
+
+  usbdescbldr_status_t
+    usbdescbldr_make_extension_unit_descriptor(usbdescbldr_ctx_t * ctx,
+    usbdescbldr_item_t * item,
+    usbdescbldr_vc_extension_unit_short_form_t * form,
+    ...);
+
 
 #ifdef __cplusplus
 }
