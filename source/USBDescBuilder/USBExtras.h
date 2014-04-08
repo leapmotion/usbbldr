@@ -27,6 +27,15 @@
 
 //structs
 
+// Class-specific headers take the extra subtype:
+typedef struct _USB_CS_DESCRIPTOR_HEADER {
+  uint8_t  bLength;
+  uint8_t  bDescriptorType;
+  uint8_t  bDescriptorSubtype;
+} USB_CS_DESCRIPTOR_HEADER;
+
+
+
 typedef struct _USB_DEVICE_DESCRIPTOR
 {
   USB_DESCRIPTOR_HEADER header;
@@ -44,7 +53,8 @@ typedef struct _USB_DEVICE_DESCRIPTOR
   uint8_t  bNumConfigurations;
 } USB_DEVICE_DESCRIPTOR;
 
-typedef struct _USB_DEVICE_QUALIFIER_DESCRIPTOR {
+typedef struct _USB_DEVICE_QUALIFIER_DESCRIPTOR
+{
   USB_DESCRIPTOR_HEADER header;
   uint16_t bcdUSB;
   uint8_t  bDeviceClass;
@@ -97,7 +107,8 @@ typedef struct _USB_SS_EP_COMPANION_DESCRIPTOR          // Question: Should this
   uint16_t wBytesPerInterval;
 } USB_SS_EP_COMPANION_DESCRIPTOR;
 
-typedef struct _GUID {
+typedef struct _GUID
+{
   uint32_t dwData1;
   uint16_t dwData2;
   uint16_t dwData3;
@@ -223,7 +234,7 @@ typedef struct _USB_UVC_VC_OUTPUT_TERMINAL
   uint8_t  iTerminal;
 } USB_UVC_VC_OUTPUT_TERMINAL;
 
-typedef struct _USB_UVC_VS_HEADER_DESCRIPTOR
+typedef struct _USB_UVC_VS_INPUT_HEADER_DESCRIPTOR
 {
   USB_DESCRIPTOR_HEADER header;
   uint8_t  bDescriptorSubType;        //0x01
@@ -236,8 +247,20 @@ typedef struct _USB_UVC_VS_HEADER_DESCRIPTOR
   uint8_t  bTriggerSupport;
   uint8_t  bTriggerUsage;
   uint8_t  bControlSize;
-  uint8_t  bmaControls;
-} USB_UVC_VS_HEADER_DESCRIPTOR;
+//  uint8_t  bmaControls;       // Added at build time
+} USB_UVC_VS_INPUT_HEADER_DESCRIPTOR;
+
+typedef struct _USB_UVC_VS_OUTPUT_HEADER_DESCRIPTOR
+{
+  USB_DESCRIPTOR_HEADER header;
+  uint8_t  bDescriptorSubType;        //0x01
+  uint8_t  bNumFormats;
+  uint16_t wTotalLength;
+  uint8_t  bEndpointAddress;
+  uint8_t  bTerminalLink;
+  uint8_t  bControlSize;
+  //  uint8_t  bmaControls;       // Added at build time
+} USB_UVC_VS_OUTPUT_HEADER_DESCRIPTOR;
 
 typedef struct _USB_UVC_VS_FORMAT_UNCOMPRESSED_DESCRIPTOR
 {
@@ -271,23 +294,78 @@ typedef struct _USB_STRING_DESCRIPTOR {
 
 typedef struct _USB_BOS_DESCRIPTOR {
   USB_DESCRIPTOR_HEADER header;
+  uint16_t  wTotalLength;
+  uint8_t bNumDeviceCaps;
 } USB_BOS_DESCRIPTOR;
+
+typedef struct _USB_DEVICE_CAPABILITY_DESCRIPTOR {
+  USB_DESCRIPTOR_HEADER header;
+  uint8_t bDevCapabilityType;
+  // uint8_t baCapability[0];
+} USB_DEVICE_CAPABILITY_DESCRIPTOR;
+
+typedef struct _UVC_VS_FORMAT_FRAME_DESCRIPTOR
+{
+  USB_CS_DESCRIPTOR_HEADER header;
+  uint8_t   bFormatIndex;
+  uint8_t   bNumFrameDescriptors;
+  GUID      guidFormat;
+  uint8_t bBitsPerPixel;
+  uint8_t bDefaultFrameIndex;
+  uint8_t bAspectRatioX;
+  uint8_t bAspectRatioY;
+  uint8_t bmInterlaceFlags;
+  uint8_t bCopyProtect;
+  uint8_t bVariableSize;
+} UVC_VS_FORMAT_FRAME_DESCRIPTOR;
+
+typedef struct _UVC_VS_FORMAT_UNCOMPRESSED_DESCRIPTOR
+{
+  USB_CS_DESCRIPTOR_HEADER header;
+  uint8_t   bFormatIndex;
+  uint8_t   bNumFrameDescriptors;
+  GUID      guidFormat;
+  uint8_t bBitsPerPixel;
+  uint8_t bDefaultFrameIndex;
+  uint8_t bAspectRatioX;
+  uint8_t bAspectRatioY;
+  uint8_t bmInterlaceFlags;
+  uint8_t bCopyProtect;
+  uint8_t bVariableSize;
+} UVC_VS_FORMAT_UNCOMPRESSED_DESCRIPTOR;
+
+typedef struct _UVC_VS_FRAME_FRAME_DESCRIPTOR
+{
+  USB_CS_DESCRIPTOR_HEADER header;
+  uint8_t   bFrameIndex;
+  uint8_t   bmCapabilities;
+  uint16_t wWidth;
+  uint16_t wHeight;
+  uint32_t dwMinBitRate;
+  uint32_t dwMaxBitRate;
+  uint32_t dwVideoFrameBufferSize;
+  uint32_t dwDefaultFrameInterval;
+  uint8_t bFrameIntervalType;
+  uint32_t dwBytesPerLine;
+
+  // .. varies depending on the value of bFrameIntervalType
+} UVC_VS_FRAME_FRAME_DESCRIPTOR;
 
 typedef struct _UVC_VS_FRAME_UNCOMPRESSED_DESCRIPTOR
 {
-  USB_DESCRIPTOR_HEADER header;
-  uint8_t  bDescriptorSubType;        //0x05
-  uint8_t  bFrameIndex;
-  uint8_t  bmCapabilities;
+  USB_CS_DESCRIPTOR_HEADER header;
+  uint8_t   bFrameIndex;
+  uint8_t   bmCapabilities;
   uint16_t wWidth;
   uint16_t wHeight;
   uint32_t dwMinBitRate;
   uint32_t dwMaxBitRate;
   uint32_t dwMaxVideoFrameBufferSize;
   uint32_t dwDefaultFrameInterval;
-  uint8_t  bFrameIntervalType;
-  uint32_t dwFrameInterval;
+  uint8_t bFrameIntervalType;
+  // .. varies depending on the value of bFrameIntervalType
 } UVC_VS_FRAME_UNCOMPRESSED_DESCRIPTOR;
+
 
 // Configuration processes
 typedef struct _USB_HS_CONFIGURATION_PROCESS
@@ -303,7 +381,7 @@ typedef struct _USB_HS_CONFIGURATION_PROCESS
   USB_ENDPOINT_DESCRIPTOR                             vcEndpointDesc;
   USB_CLASS_SPECIFIC_INTERRUPT_ENDPOINT_DESCRIPTOR    csInterruptEndpointDesc;
   USB_INTERFACE_DESCRIPTOR                            vsInterfaceDesc;
-  USB_UVC_VS_HEADER_DESCRIPTOR                        vsHeaderDesc;
+  USB_UVC_VS_INPUT_HEADER_DESCRIPTOR                  vsHeaderDesc;
   USB_UVC_VS_FORMAT_UNCOMPRESSED_DESCRIPTOR           vsFormatUncompressedDesc;
   UVC_VS_FRAME_UNCOMPRESSED_DESCRIPTOR                vsFrameUncompressedDesc[NUM_FRAME_DESCRIPTOR];
   USB_ENDPOINT_DESCRIPTOR                             vsEndpointDesc;
@@ -323,7 +401,7 @@ typedef struct _USB_SS_CONFIGURATION_PROCESS
   USB_SS_EP_COMPANION_DESCRIPTOR                      vcSSCompanionDesc;
   USB_CLASS_SPECIFIC_INTERRUPT_ENDPOINT_DESCRIPTOR    csInterruptEndpointDesc;
   USB_INTERFACE_DESCRIPTOR                            vsInterfaceDesc;
-  USB_UVC_VS_HEADER_DESCRIPTOR                        vsHeaderDesc;
+  USB_UVC_VS_INPUT_HEADER_DESCRIPTOR                  vsHeaderDesc;
   USB_UVC_VS_FORMAT_UNCOMPRESSED_DESCRIPTOR           vsFormatUncompressedDesc;
   UVC_VS_FRAME_UNCOMPRESSED_DESCRIPTOR                vsFrameUncompressedDesc[NUM_FRAME_DESCRIPTOR];
   USB_ENDPOINT_DESCRIPTOR                             vsEndpointDesc;
@@ -333,14 +411,6 @@ typedef struct _USB_SS_CONFIGURATION_PROCESS
 
 // This needs a better home:
 static const uint8_t USB_DESCRIPTOR_TYPE_SS_EP_COMPANION = 0x30;
-
-
-// Class-specific headers take the extra subtype:
-typedef struct _USB_CS_DESCRIPTOR_HEADER {
-  uint8_t  bLength;
-  uint8_t  bDescriptorType;
-  uint8_t  bDescriptorSubtype;
-} USB_CS_DESCRIPTOR_HEADER;
 
 
 typedef struct _USB_VC_CS_INTERFACE_DESCRIPTOR
@@ -354,6 +424,13 @@ typedef struct _USB_VC_CS_INTERFACE_DESCRIPTOR
 } USB_VC_CS_INTERFACE_DESCRIPTOR;
 
 
+typedef struct _USB_VC_CS_INTR_EP_DESCRIPTOR
+{
+  USB_CS_DESCRIPTOR_HEADER header;
+  uint16_t  wMaxTransferSize;
+} USB_VC_CS_INTR_EP_DESCRIPTOR;
+
+// UVC Class and Class-specifics:
 // A.1
 static const uint8_t USB_INTERFACE_CC_VIDEO = 0x0E;
 
@@ -385,7 +462,6 @@ static const uint8_t USB_INTERFACE_SUBTYPE_VC_PROCESSING_UNIT = 0x05;
 static const uint8_t USB_INTERFACE_SUBTYPE_VC_EXTENSION_UNIT = 0x06;
 static const uint8_t USB_INTERFACE_SUBTYPE_VC_ENCODING_UNIT = 0x07;
 
-
 // A.6
 static const uint8_t USB_INTERFACE_SUBTYPE_VS_UNDEFINED = 0x00;
 static const uint8_t USB_INTERFACE_SUBTYPE_VS_INPUT_HEADER = 0x01;
@@ -407,9 +483,9 @@ static const uint8_t USB_INTERFACE_SUBTYPE_VS_FORMAT_H264_SIMULCAST = 0x15;
 
 // A.7
 static const uint8_t USB_VC_SUBTYPE_EP_UNDEFINED = 0x00;
-static const uint8_t USB_VC_SUBTYPE_EP_UNDEFINEDEP_GENERAL = 0x01;
-static const uint8_t USB_VC_SUBTYPE_EP_UNDEFINEDEP_ENDPOINT = 0x02;
-static const uint8_t USB_VC_SUBTYPE_EP_UNDEFINEDEP_INTERRUPT = 0x03;
+static const uint8_t USB_VC_SUBTYPE_EP_GENERAL = 0x01;
+static const uint8_t USB_VC_SUBTYPE_EP_ENDPOINT = 0x02;
+static const uint8_t USB_VC_SUBTYPE_EP_INTERRUPT = 0x03;
 
 // USB_UVC_ITT_CAMERA
 

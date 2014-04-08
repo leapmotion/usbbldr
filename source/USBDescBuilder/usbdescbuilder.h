@@ -58,9 +58,10 @@ typedef struct usbdescbldr_ctx_s {
   // (It's this, or make people count their arguments manually.)
   // Since zero can be a common value to pass, zero makes a poor
   // terminator. We choose a value which cannot be represented as
-  // a uint8_t or uint16_t and which should be unlikely
+  // a uint8_t or uint16_t, isn't a legit pointer, and should be unlikely
   // as a DWORD (uint32_t) value in a descriptor.
-  static const uint32_t USBDESCBLDR_LIST_END = 0xee00eeee;
+  static const uint32_t USBDESCBLDR_LIST_END = 0xee00eeef;
+
 
   // The 'handle' by which callers store the results of maker calls. Callers
   // 'know' this structure only to provide them as return (out) parameters;
@@ -74,6 +75,8 @@ typedef struct usbdescbldr_ctx_s {
     unsigned int                items;          // Number iof sub-items ('children')
     struct usbdescbldr_item_s * item[USBDESCBLDR_MAX_CHILDREN];
   } usbdescbldr_item_t;
+
+
 
   // Setup and teardown
 
@@ -109,7 +112,7 @@ typedef struct usbdescbldr_ctx_s {
   usbdescbldr_status_t
   usbdescbldr_end(void);
 
-
+  // //////////////////////////////////////////////////////////////////
   // Constructions
 
   // Make a set of items subordinate to one parent item. This
@@ -153,18 +156,14 @@ typedef struct usbdescbldr_ctx_s {
                                      usbdescbldr_item_t *item,
                                      usbdescbldr_device_descriptor_short_form_t *form);
     
-  
+  // //////////////////////////////////////////////////////////////////
+
   typedef struct {
     uint16_t	bcdUSB;		// USB Spec Version
     uint8_t	bDeviceClass;
     uint8_t	bDeviceSubClass;
     uint8_t	bDeviceProtocol;
-    uint16_t	idVendor;
-    uint16_t	idProduct;
-    uint16_t	bcdDevice;	// BCD-encoded Release #
-    uint8_t	iManufacturer;	// String index
-    uint8_t	iProduct;	// String index
-    uint8_t	iSerialNumber;	// String Index
+    uint8_t bMaxPacketSize0;
     uint8_t	bNumConfigurations;
   } usbdescbldr_device_qualifier_short_form_t;
 
@@ -174,6 +173,7 @@ typedef struct usbdescbldr_ctx_s {
                                                usbdescbldr_item_t *item, 
                                                usbdescbldr_device_qualifier_short_form_t * form);
     
+  // //////////////////////////////////////////////////////////////////
 
   // Define a new string and obtain its index. This is a one-shot top-level item.
   // Pass the string in ASCII and NULL-terminated (a classic C string).
@@ -183,12 +183,14 @@ typedef struct usbdescbldr_ctx_s {
                                     uint8_t *index,         // OUT
                                     char *string);                // OUT
 
+  // //////////////////////////////////////////////////////////////////
 
   // Generate a Binary Object Store. This is top-level.
   // Add the device Capabilities to it to complete the BOS.
   usbdescbldr_status_t 
     usbdescbldr_make_bos_descriptor(usbdescbldr_ctx_t *       ctx,
                                   usbdescbldr_item_t *          item);
+
 
   // Generate a Device Capability descriptor.
   usbdescbldr_status_t
@@ -201,9 +203,6 @@ typedef struct usbdescbldr_ctx_s {
  
 
   // Generate a Device Configuration descriptor. 
-  // The string index for
-  // the iConfiguration must be provided, but also the string (if any)
-  // must be added as a child of the configuration.
   // Likewise, the short form takes the number of interfaces, but these too
   // must be added to the children.
   // The assigned configuration
@@ -350,8 +349,6 @@ typedef struct usbdescbldr_ctx_s {
     uint8_t  bUnitID;
     GUID     guidExtensionCode;
     uint8_t  bNumControls;
-    uint8_t  bNrInPins;
-    uint8_t  baSourceID;
     uint8_t  bControlSize;
     uint8_t * bmControls;
     uint8_t  iExtension;
@@ -361,7 +358,157 @@ typedef struct usbdescbldr_ctx_s {
     usbdescbldr_make_extension_unit_descriptor(usbdescbldr_ctx_t * ctx,
     usbdescbldr_item_t * item,
     usbdescbldr_vc_extension_unit_short_form_t * form,
-    ...);
+    ...); // Varying number of SourceIDs.
+
+
+  // UVC Class-Specific VC interrupt endpoint:
+
+  usbdescbldr_status_t
+    usbdescbldr_make_vc_interrupt_ep(usbdescbldr_ctx_t * ctx,
+    usbdescbldr_item_t * item,
+    uint16_t wMaxTransferSize);
+
+
+
+  // The Standard VS Interface is 'standard' in that it is not
+  // class-specific. Use the standard interface maker, above.
+  // ...
+
+
+  // UVC Video Stream Interface Input Header
+
+
+  typedef struct
+  {
+    uint8_t  bNumFormats;
+    uint8_t  bEndpointAddress;
+    uint8_t  bmInfo;
+    uint8_t  bTerminalLink;
+    uint8_t  bStillCaptureMethod;
+    uint8_t  bTriggerSupport;
+    uint8_t  bTriggerUsage;
+  } usbdescbldr_vs_if_input_header_short_form_t;
+
+  usbdescbldr_status_t
+    usbdescbldr_make_uvc_vs_if_input_header(usbdescbldr_ctx_t * ctx,
+    usbdescbldr_item_t * item,
+    usbdescbldr_vs_if_input_header_short_form_t * form,
+    ...); // Varying: bmaControls (which are passed as int32s), terminated by USBDESCBLDR_LIST_END
+
+
+    // UVC Video Stream Interface Output Header
+
+    typedef struct
+  {
+      uint8_t  bNumFormats;
+      uint8_t  bEndpointAddress;
+      uint8_t  bmInfo;
+      uint8_t  bTerminalLink;
+      uint8_t  bStillCaptureMethod;
+      uint8_t  bTriggerSupport;
+      uint8_t  bTriggerUsage;
+    } usbdescbldr_vs_if_output_header_short_form_t;
+
+    usbdescbldr_status_t
+      usbdescbldr_make_uvc_vs_if_output_header(usbdescbldr_ctx_t * ctx,
+      usbdescbldr_item_t * item,
+      usbdescbldr_vs_if_output_header_short_form_t * form,
+      ...); // Varying: bmaControls (which are passed as int32s), terminated by USBDESCBLDR_LIST_END
+
+
+
+
+    typedef struct {
+      uint8_t   bFormatIndex;
+      uint8_t   bNumFrameDescriptors;
+      GUID      guidFormat;
+      uint8_t bBitsPerPixel;
+      uint8_t bDefaultFrameIndex;
+      uint8_t bAspectRatioX;
+      uint8_t bAspectRatioY;
+      uint8_t bmInterlaceFlags;
+      uint8_t bCopyProtect;
+      uint8_t bVariableSize;
+    } usbdescbldr_uvc_vs_format_frame_based_short_form_t;
+
+    usbdescbldr_status_t
+      usbdescbldr_make_uvc_vs_format_frame(usbdescbldr_ctx_t * ctx,
+      usbdescbldr_item_t * item,
+      usbdescbldr_uvc_vs_format_frame_based_short_form_t * form);
+
+
+
+    typedef struct
+    {
+      uint8_t  bFrameIndex;
+      uint8_t  bmCapabilities;
+      uint16_t wWidth;
+      uint16_t wHeight;
+      uint32_t dwMinBitRate;
+      uint32_t dwMaxBitRate;
+      uint32_t dwMaxVideoFrameBufferSize;
+      uint32_t dwDefaultFrameInterval;
+      uint8_t  bFrameIntervalType;
+      uint32_t dwBytesPerLine;
+    } usbdescbldr_uvc_vs_frame_frame_based_short_form_t;
+
+
+    usbdescbldr_status_t
+      usbdescbldr_make_uvc_vs_frame_frame(usbdescbldr_ctx_t * ctx,
+      usbdescbldr_item_t * item,
+      usbdescbldr_uvc_vs_frame_frame_based_short_form_t * form,
+      ...);
+
+
+
+
+    typedef struct
+    {
+      uint8_t   bFormatIndex;
+      uint8_t   bNumFrameDescriptors;
+      GUID      guidFormat;
+      uint8_t bBitsPerPixel;
+      uint8_t bDefaultFrameIndex;
+      uint8_t bAspectRatioX;
+      uint8_t bAspectRatioY;
+      uint8_t bmInterlaceFlags;
+      uint8_t bCopyProtect;
+    } usbdescbldr_uvc_vs_format_uncompressed_short_form_t;
+
+    // UVC Video Stream Format (Uncompressed)
+
+    usbdescbldr_status_t
+      usbdescbldr_make_uvc_vs_format_uncompressed(usbdescbldr_ctx_t * ctx,
+      usbdescbldr_item_t * item,
+      usbdescbldr_uvc_vs_format_uncompressed_short_form_t * form);
+
+
+
+    // Frame Descriptors
+
+    typedef struct
+    {
+      uint8_t   bFrameIndex;
+      uint8_t   bmCapabilities;
+      uint16_t wWidth;
+      uint16_t wHeight;
+      uint32_t dwMinBitRate;
+      uint32_t dwMaxBitRate;
+      uint32_t dwMaxVideoFrameBufferSize;
+      uint32_t dwDefaultFrameInterval;
+      uint8_t bFrameIntervalType;
+      uint32_t dwBytesPerLine;
+    } usbdescbldr_uvc_vs_frame_uncompressed_short_form_t;
+
+    usbdescbldr_status_t
+      usbdescbldr_make_uvc_vs_frame_uncompressed(usbdescbldr_ctx_t * ctx,
+      usbdescbldr_item_t * item,
+      usbdescbldr_uvc_vs_frame_uncompressed_short_form_t * form,
+      ... /* interval data */);
+
+
+
+
 
 
 #ifdef __cplusplus

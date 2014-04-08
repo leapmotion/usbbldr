@@ -17,7 +17,7 @@ enum
 	USB_POWER   			= 0x08,
   USB_INTERFACE_ASSOCIATION = 11,
   USB_BOS           = 0x0f,
-  USB_DEVICE_CAPABILTY = 0x10,
+  USB_DEVICE_CAPABILITY = 0x10,
 	UVC_CS_UNDEFINED		= 0x20,
 	UVC_CS_DEVICE			= 0x21,
 	UVC_CS_CONFIGURATION	= 0x22,
@@ -95,8 +95,11 @@ enum _USB_DESCRIPTOR_TYPE
   //! Interface association descriptor type.
   USB_DESCRIPTOR_TYPE_INTERFACE_ASSOCIATION = 0x0B,
 
-  //! Interface association descriptor type.
+  //! Binary Object Store descriptor type.
   USB_DESCRIPTOR_TYPE_BOS = 0x0f,
+
+  //! Device Capability descriptor type.
+  USB_DESCRIPTOR_TYPE_DEVICE_CAPABILITY = 0x10,
 };
 typedef unsigned char USB_DESCRIPTOR_TYPE;
 

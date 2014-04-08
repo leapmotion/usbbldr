@@ -379,7 +379,7 @@ usbdescbldr_make_device_qualifier_descriptor(usbdescbldr_ctx_t * ctx,
     if (form->bcdUSB < 0x0300)
       dest->bMaxPacketSize0 = 64;
     else
-      dest->bMaxPacketSize0 = 5; // 2^5 == 64
+      dest->bMaxPacketSize0 = 9; // 2^9 == 512
 
     dest->bNumConfigurations = form->bNumConfigurations;
     dest->bReserved = 0;
@@ -655,12 +655,51 @@ usbdescbldr_make_bos_descriptor(usbdescbldr_ctx_t * ctx,
 // Generate a Device Capability descriptor.
 usbdescbldr_status_t
 usbdescbldr_make_device_capability_descriptor(usbdescbldr_ctx_t * ctx,
-                                              usbdescbldr_item_t *    item,
+                                              usbdescbldr_item_t * item,
                                               uint8_t	          bDevCapabilityType,
-                                              uint8_t *	        typeDependent,	// Anonymous uint8_ta data
-                                              size_t		              typeDependentSize)
+                                              uint8_t *	        typeDependent,	// Anonymous byte data
+                                              size_t		        typeDependentSize)
 {
-  return USBDESCBLDR_UNSUPPORTED;
+  USB_DEVICE_CAPABILITY_DESCRIPTOR *dest;
+  size_t needs;
+
+  if(ctx == NULL || item == NULL)
+    return USBDESCBLDR_INVALID;
+
+  if(typeDependentSize != 0 && typeDependent == NULL)
+    return USBDESCBLDR_INVALID;
+
+  // This has a fixed length, so check up front
+  needs = sizeof(*dest);
+  needs += typeDependentSize;
+
+  if(needs > 0xff)
+    return USBDESCBLDR_OVERSIZED;  // .. as opposed to NO SPACE ..
+
+  // Construct
+  if(ctx->buffer != NULL) {
+    if(needs > _bufferAvailable(ctx))
+      return USBDESCBLDR_NO_SPACE;
+
+    dest = (USB_DEVICE_CAPABILITY_DESCRIPTOR *) ctx->append;
+    memset(dest, 0, sizeof(*dest));
+
+    dest->header.bLength = needs;
+    dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_DEVICE_CAPABILITY;
+
+    dest->bDevCapabilityType = bDevCapabilityType;
+    memcpy(dest + 1, typeDependent, typeDependentSize);
+  }
+
+  // Build the item 
+  _item_init(item);
+  item->size = needs;
+  item->address = ctx->append;
+
+  // Consume buffer space (or just count, in dry run mode)
+  ctx->append += needs;
+
+  return USBDESCBLDR_OK;
 }
 
 
@@ -930,7 +969,7 @@ unsigned int dwClockFrequency,
     dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_VC_CS_INTERFACE;
     dest->header.bDescriptorSubtype = USB_INTERFACE_SUBTYPE_VC_HEADER;
 
-    tShort = ctx->fHostToLittleShort(0x0150);
+    tShort = ctx->fHostToLittleShort(0x0150);               // This is: UVC Class definition 1.5
     memcpy(&dest->bcdUVC, &tShort, sizeof(dest->bcdUVC));
 
     tInt = ctx->fHostToLittleInt(dwClockFrequency);
@@ -1150,7 +1189,7 @@ usbdescbldr_status_t
 usbdescbldr_make_extension_unit_descriptor(usbdescbldr_ctx_t * ctx,
 usbdescbldr_item_t * item,
 usbdescbldr_vc_extension_unit_short_form_t * form,
-...)
+...) // Varying number of SourceIDs.
 {
   USB_UVC_VC_EXTENSION_UNIT * dest;
   size_t needs;
@@ -1199,14 +1238,10 @@ usbdescbldr_vc_extension_unit_short_form_t * form,
     dest->bDescriptorSubType = USB_INTERFACE_SUBTYPE_VC_EXTENSION_UNIT;
 
     dest->bUnitID = form->bUnitID;
-    // Note that GUID is actually:
-    // dwData1  uint32_t
-    // dwData2  uint16_t
-    // dwData3  uint16_t
-    // dwData4  uint8[8]
+
     tGUID.dwData1 = ctx->fHostToLittleInt(form->guidExtensionCode.dwData1);
-    tGUID.dwData2 = ctx->fHostToLittleInt(form->guidExtensionCode.dwData2);
-    tGUID.dwData3 = ctx->fHostToLittleInt(form->guidExtensionCode.dwData3);
+    tGUID.dwData2 = ctx->fHostToLittleShort(form->guidExtensionCode.dwData2);
+    tGUID.dwData3 = ctx->fHostToLittleShort(form->guidExtensionCode.dwData3);
     memcpy(&tGUID.dwData4, form->guidExtensionCode.dwData4, sizeof(tGUID.dwData4));
     memcpy(&dest->guidExtensionCode, &tGUID, sizeof(dest->guidExtensionCode));
 
@@ -1242,3 +1277,508 @@ usbdescbldr_vc_extension_unit_short_form_t * form,
 
   return USBDESCBLDR_OK;
 }
+
+// UVC Class-Specific VC interrupt endpoint:
+
+usbdescbldr_status_t
+usbdescbldr_make_vc_interrupt_ep(usbdescbldr_ctx_t * ctx,
+usbdescbldr_item_t * item,
+uint16_t wMaxTransferSize)
+{
+  USB_VC_CS_INTR_EP_DESCRIPTOR * dest;
+  size_t needs;
+  uint16_t t16;
+
+  if(ctx == NULL || item == NULL)
+    return USBDESCBLDR_INVALID;
+
+  needs = sizeof(*dest);
+
+  // Construct
+  if(ctx->buffer != NULL) {
+    if(needs > _bufferAvailable(ctx))
+      return USBDESCBLDR_NO_SPACE;
+
+    dest = (USB_VC_CS_INTR_EP_DESCRIPTOR *) ctx->append;
+    memset(dest, 0, sizeof(*dest));
+
+    dest->header.bLength = needs;
+    dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_VC_CS_ENDPOINT;
+    dest->header.bDescriptorSubtype = USB_VC_SUBTYPE_EP_INTERRUPT;
+
+    t16 = ctx->fHostToLittleShort(wMaxTransferSize);
+    memcpy(&dest->wMaxTransferSize, &t16, sizeof(dest->wMaxTransferSize));
+  }
+
+  // Build the item 
+  _item_init(item);
+  item->size = needs;
+  item->address = ctx->append;
+
+  // Consume buffer space (or just count, in dry run mode)
+  ctx->append += needs;
+
+  return USBDESCBLDR_OK;
+}
+
+
+
+// UVC Video Stream Interface Input Header
+
+usbdescbldr_status_t
+usbdescbldr_make_uvc_vs_if_input_header(usbdescbldr_ctx_t * ctx,
+usbdescbldr_item_t * item,
+usbdescbldr_vs_if_input_header_short_form_t * form,
+...) // Varying: bmaControls (which are passed as int32s), terminated by USBDESCBLDR_LIST_END
+{
+  USB_UVC_VS_INPUT_HEADER_DESCRIPTOR * dest;
+  size_t needs;
+  uint8_t   bNumFormats;      // Number of formats (controls)
+  uint8_t * drop;             // Place to drop next built member
+  va_list   va, va_count;
+
+  if(item == NULL || form == NULL)
+    return USBDESCBLDR_INVALID;
+
+  // Determine the final length
+  va_start(va_count, form);
+  va_copy(va, va_count);
+
+  for(bNumFormats = 0; va_arg(va_count, uint32_t) != USBDESCBLDR_LIST_END; bNumFormats++)
+    // COULD range-check each source to be a byte value here
+    ;
+  va_end(va_count);
+
+  needs = sizeof(*dest);                    // Prefix of fixed-size fields
+  needs += sizeof(uint8_t) * bNumFormats;   // bmaControls
+
+  if(needs > 0xff) {
+    va_end(va);
+    return USBDESCBLDR_OVERSIZED;  // .. as opposed to NO SPACE ..
+  }
+
+  // Construct
+  if(ctx->buffer != NULL) {
+    if(needs > _bufferAvailable(ctx)) {
+      va_end(va);
+      return USBDESCBLDR_NO_SPACE;
+    }
+
+    dest = (USB_UVC_VS_INPUT_HEADER_DESCRIPTOR *) ctx->append;
+    memset(dest, 0, sizeof(*dest));
+
+    dest->header.bLength = needs;
+    dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_VC_CS_INTERFACE;
+    dest->bDescriptorSubType = USB_INTERFACE_SUBTYPE_VS_INPUT_HEADER;
+
+    dest->bNumFormats = bNumFormats;
+    dest->bEndpointAddress = form->bEndpointAddress;
+    dest->bmInfo = form->bmInfo;
+    dest->bTerminalLink = form->bTerminalLink;
+    dest->bStillCaptureMethod = form->bStillCaptureMethod;
+    dest->bTriggerSupport = form->bTriggerSupport;
+    dest->bTriggerUsage = form->bTriggerUsage;
+    dest->bControlSize = sizeof(uint8_t); // Not very general, but standardized (for now)
+
+    drop = (uint8_t *) & dest + sizeof(dest); // Beginning of bmaControls
+
+    // Tack on the Controls. These are 8-bit values, but were upcast to int32s by the call
+    for(; bNumFormats > 0; bNumFormats--)
+      *drop++ = (uint8_t) va_arg(va, uint32_t);
+  }
+  va_end(va);
+
+  // Build the item 
+  _item_init(item);
+  item->size = needs;
+  item->address = ctx->append;
+
+  // Consume buffer space (or just count, in dry run mode)
+  ctx->append += needs;
+
+  return USBDESCBLDR_OK;
+}
+
+
+// UVC Video Stream Interface Output Header
+
+usbdescbldr_status_t
+usbdescbldr_make_uvc_vs_if_output_header(usbdescbldr_ctx_t * ctx,
+usbdescbldr_item_t * item,
+usbdescbldr_vs_if_output_header_short_form_t * form,
+...) // Varying: bmaControls (which are passed as int32s), terminated by USBDESCBLDR_LIST_END
+{
+  USB_UVC_VS_OUTPUT_HEADER_DESCRIPTOR * dest;
+  size_t needs;
+  uint8_t   bNumFormats;      // Number of formats (controls)
+  uint8_t * drop;             // Place to drop next built member
+
+  va_list   va, va_count;
+
+  if(item == NULL || form == NULL)
+    return USBDESCBLDR_INVALID;
+
+  // Determine the final length
+  va_start(va_count, form);
+  va_copy(va, va_count);
+
+  for(bNumFormats = 0; va_arg(va_count, uint32_t) != USBDESCBLDR_LIST_END; bNumFormats++)
+    // COULD range-check each source to be a byte value here
+    ;
+  va_end(va_count);
+
+  needs = sizeof(*dest);                    // Prefix of fixed-size fields
+  needs += sizeof(uint8_t) * bNumFormats;   // bmaControls
+
+  if(needs > 0xff) {
+    va_end(va);
+    return USBDESCBLDR_OVERSIZED;  // .. as opposed to NO SPACE ..
+  }
+
+  // Construct
+  if(ctx->buffer != NULL) {
+    if(needs > _bufferAvailable(ctx)) {
+      va_end(va);
+      return USBDESCBLDR_NO_SPACE;
+    }
+
+    dest = (USB_UVC_VS_OUTPUT_HEADER_DESCRIPTOR *) ctx->append;
+    memset(dest, 0, sizeof(*dest));
+
+    dest->header.bLength = needs;
+    dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_VC_CS_INTERFACE;
+    dest->bDescriptorSubType = USB_INTERFACE_SUBTYPE_VS_INPUT_HEADER;
+
+    dest->bNumFormats = bNumFormats;
+    dest->bEndpointAddress = form->bEndpointAddress;
+    dest->bTerminalLink = form->bTerminalLink;
+    dest->bControlSize = sizeof(uint8_t); // Not very general, but standardized (for now)
+
+    drop = (uint8_t *) & dest + sizeof(dest); // Beginning of bmaControls
+
+    // Tack on the Controls. These are 8-bit values, but were upcast to int32s by the call
+    for(; bNumFormats > 0; bNumFormats--)
+      *drop++ = (uint8_t) va_arg(va, uint32_t);
+  }
+  va_end(va);
+
+  // Build the item 
+  _item_init(item);
+  item->size = needs;
+  item->address = ctx->append;
+
+  // Consume buffer space (or just count, in dry run mode)
+  ctx->append += needs;
+
+  return USBDESCBLDR_OK;
+}
+
+
+// Payload Format Descriptors
+
+
+// UVC Video Stream Format (Frame Based)
+
+usbdescbldr_status_t
+usbdescbldr_make_uvc_vs_format_frame(usbdescbldr_ctx_t * ctx,
+usbdescbldr_item_t * item,
+usbdescbldr_uvc_vs_format_frame_based_short_form_t * form)
+{
+  UVC_VS_FORMAT_FRAME_DESCRIPTOR * dest;
+  size_t needs;
+  GUID     tGUID;
+
+  if(ctx == NULL || form == NULL || item == NULL)
+    return USBDESCBLDR_INVALID;
+
+  needs = sizeof(*dest);
+
+  // Construct
+  if(ctx->buffer != NULL) {
+    if(needs > _bufferAvailable(ctx))
+      return USBDESCBLDR_NO_SPACE;
+
+    dest = (UVC_VS_FORMAT_FRAME_DESCRIPTOR *) ctx->append;
+    memset(dest, 0, sizeof(*dest));
+
+    dest->header.bLength = needs;
+    dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_VC_CS_INTERFACE;
+    dest->header.bDescriptorSubtype = USB_INTERFACE_SUBTYPE_VS_FORMAT_FRAME_BASED;
+
+    dest->bFormatIndex = form->bFormatIndex;
+    dest->bNumFrameDescriptors = form->bNumFrameDescriptors;
+
+    tGUID.dwData1 = ctx->fHostToLittleInt(form->guidFormat.dwData1);
+    tGUID.dwData2 = ctx->fHostToLittleShort(form->guidFormat.dwData2);
+    tGUID.dwData3 = ctx->fHostToLittleShort(form->guidFormat.dwData3);
+    memcpy(&tGUID.dwData4, form->guidFormat.dwData4, sizeof(tGUID.dwData4));
+    memcpy(&dest->guidFormat, &tGUID, sizeof(dest->guidFormat));
+
+    dest->bBitsPerPixel = form->bBitsPerPixel;
+    dest->bDefaultFrameIndex = form->bDefaultFrameIndex;
+    dest->bAspectRatioX = form->bAspectRatioX;
+    dest->bAspectRatioY = form->bAspectRatioY;
+    dest->bmInterlaceFlags = form->bmInterlaceFlags;
+    dest->bCopyProtect = form->bCopyProtect;
+  }
+
+  // Build the item 
+  _item_init(item);
+  item->size = needs;
+  item->address = ctx->append;
+
+  // Consume buffer space (or just count, in dry run mode)
+  ctx->append += needs;
+
+  return USBDESCBLDR_OK;
+
+}
+
+// UVC Video Stream Format (Uncompressed)
+
+usbdescbldr_status_t
+usbdescbldr_make_uvc_vs_format_uncompressed(usbdescbldr_ctx_t * ctx,
+usbdescbldr_item_t * item,
+usbdescbldr_uvc_vs_format_uncompressed_short_form_t * form)
+{
+  UVC_VS_FORMAT_UNCOMPRESSED_DESCRIPTOR * dest;
+  size_t needs;
+  GUID     tGUID;
+
+  if(ctx == NULL || form == NULL || item == NULL)
+    return USBDESCBLDR_INVALID;
+
+  needs = sizeof(*dest);
+
+  // Construct
+  if(ctx->buffer != NULL) {
+    if(needs > _bufferAvailable(ctx))
+      return USBDESCBLDR_NO_SPACE;
+
+    dest = (UVC_VS_FORMAT_UNCOMPRESSED_DESCRIPTOR *) ctx->append;
+    memset(dest, 0, sizeof(*dest));
+
+    dest->header.bLength = needs;
+    dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_VC_CS_INTERFACE;
+    dest->header.bDescriptorSubtype = USB_INTERFACE_SUBTYPE_VS_FORMAT_UNCOMPRESSED;
+
+    dest->bFormatIndex = form->bFormatIndex;
+    dest->bNumFrameDescriptors = form->bNumFrameDescriptors;
+
+    tGUID.dwData1 = ctx->fHostToLittleInt(form->guidFormat.dwData1);
+    tGUID.dwData2 = ctx->fHostToLittleShort(form->guidFormat.dwData2);
+    tGUID.dwData3 = ctx->fHostToLittleShort(form->guidFormat.dwData3);
+    memcpy(&tGUID.dwData4, form->guidFormat.dwData4, sizeof(tGUID.dwData4));
+    memcpy(&dest->guidFormat, &tGUID, sizeof(dest->guidFormat));
+
+    dest->bBitsPerPixel = form->bBitsPerPixel;
+    dest->bDefaultFrameIndex = form->bDefaultFrameIndex;
+    dest->bAspectRatioX = form->bAspectRatioX;
+    dest->bAspectRatioY = form->bAspectRatioY;
+    dest->bmInterlaceFlags = form->bmInterlaceFlags;
+    dest->bCopyProtect = form->bCopyProtect;
+  }
+
+  // Build the item 
+  _item_init(item);
+  item->size = needs;
+  item->address = ctx->append;
+
+  // Consume buffer space (or just count, in dry run mode)
+  ctx->append += needs;
+
+  return USBDESCBLDR_OK;
+
+}
+
+
+
+// Frame Descriptors
+
+usbdescbldr_status_t
+usbdescbldr_make_uvc_vs_frame_frame(usbdescbldr_ctx_t * ctx,
+usbdescbldr_item_t * item,
+usbdescbldr_uvc_vs_frame_frame_based_short_form_t * form,
+... /* interval data */)
+{
+  UVC_VS_FRAME_FRAME_DESCRIPTOR * dest;
+  size_t needs;
+  uint8_t * drop;             // Place to drop next built member
+  uint16_t t16;
+  uint32_t t32;
+  uint8_t   intervalsParams;
+
+  va_list   va;
+
+  if(item == NULL || form == NULL)
+    return USBDESCBLDR_INVALID;
+
+  // Determine the final length
+  if(form->bFrameIntervalType == 0) {
+    // Continuous: expect base, granularity, max.
+    intervalsParams = 3;
+  } else {
+    // Discrete: caller passes each possible setting.
+    intervalsParams = form->bFrameIntervalType;
+  }
+
+  needs = sizeof(*dest);                        // Prefix of fixed-size fields
+  needs += sizeof(uint8_t) * intervalsParams;   // intervals
+  if(needs > 0xff) {
+    return USBDESCBLDR_OVERSIZED;  // .. as opposed to NO SPACE ..
+  }
+
+  // Construct
+  if(ctx->buffer != NULL) {
+    if(needs > _bufferAvailable(ctx)) {
+      return USBDESCBLDR_NO_SPACE;
+    }
+
+    dest = (UVC_VS_FRAME_FRAME_DESCRIPTOR *) ctx->append;
+    memset(dest, 0, sizeof(*dest));
+
+    dest->header.bLength = needs;
+    dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_VC_CS_INTERFACE;
+    dest->header.bDescriptorSubtype = USB_INTERFACE_SUBTYPE_VS_FRAME_FRAME_BASED;
+
+    dest->bFrameIndex = form->bFrameIndex;
+    dest->bmCapabilities = form->bmCapabilities;
+
+    t16 = ctx->fHostToLittleShort(form->wWidth);
+    memcpy(&dest->wWidth, &t16, sizeof(dest->wWidth));
+
+    t16 = ctx->fHostToLittleShort(form->wWidth);
+    memcpy(&dest->wWidth, &t16, sizeof(dest->wWidth));
+
+    t32 = ctx->fHostToLittleInt(form->dwMinBitRate);
+    memcpy(&dest->dwMinBitRate, &t32, sizeof(dest->dwMinBitRate));
+
+    t32 = ctx->fHostToLittleInt(form->dwMaxBitRate);
+    memcpy(&dest->dwMaxBitRate, &t32, sizeof(dest->dwMaxBitRate));
+
+    t32 = ctx->fHostToLittleInt(form->dwDefaultFrameInterval);
+    memcpy(&dest->dwDefaultFrameInterval, &t32, sizeof(dest->dwDefaultFrameInterval));
+
+    t32 = ctx->fHostToLittleInt(form->dwBytesPerLine);
+    memcpy(&dest->dwBytesPerLine, &t32, sizeof(dest->dwBytesPerLine));
+
+    dest->bFrameIntervalType = form->bFrameIntervalType;
+
+    drop = (uint8_t *) & dest + sizeof(dest); // Beginning of interval table
+    va_start(va, form);
+    for(; intervalsParams > 0; intervalsParams--) {
+      t32 = ctx->fHostToLittleInt(va_arg(va, uint32_t));
+      memcpy(drop, &t32, sizeof(t32));
+      drop += sizeof(t32);
+    }
+    va_end(va);
+  }
+
+  // Build the item 
+  _item_init(item);
+  item->size = needs;
+  item->address = ctx->append;
+
+  // Consume buffer space (or just count, in dry run mode)
+  ctx->append += needs;
+
+  return USBDESCBLDR_OK;
+}
+
+
+
+usbdescbldr_status_t
+usbdescbldr_make_uvc_vs_frame_uncompressed(usbdescbldr_ctx_t * ctx,
+usbdescbldr_item_t * item,
+usbdescbldr_uvc_vs_frame_uncompressed_short_form_t * form,
+... /* interval data */)
+{
+  UVC_VS_FRAME_UNCOMPRESSED_DESCRIPTOR * dest;
+  size_t needs;
+  uint8_t * drop;             // Place to drop next built member
+  uint16_t t16;
+  uint32_t t32;
+  uint8_t   intervalsParams;
+
+  va_list   va;
+
+  if(item == NULL || form == NULL)
+    return USBDESCBLDR_INVALID;
+
+  // Determine the final length
+  if(form->bFrameIntervalType == 0) {
+    // Continuous: expect base, granularity, max.
+    intervalsParams = 3;
+  }
+  else {
+    // Discrete: caller passes each possible setting.
+    intervalsParams = form->bFrameIntervalType;
+  }
+
+  needs = sizeof(*dest);                        // Prefix of fixed-size fields
+  needs += sizeof(uint8_t) * intervalsParams;   // intervals
+  if(needs > 0xff) {
+    return USBDESCBLDR_OVERSIZED;  // .. as opposed to NO SPACE ..
+  }
+
+  // Construct
+  if(ctx->buffer != NULL) {
+    if(needs > _bufferAvailable(ctx)) {
+      return USBDESCBLDR_NO_SPACE;
+    }
+
+    dest = (UVC_VS_FRAME_UNCOMPRESSED_DESCRIPTOR *) ctx->append;
+    memset(dest, 0, sizeof(*dest));
+
+    dest->header.bLength = needs;
+    dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_VC_CS_INTERFACE;
+    dest->header.bDescriptorSubtype = USB_INTERFACE_SUBTYPE_VS_FRAME_FRAME_BASED;
+
+    dest->bFrameIndex = form->bFrameIndex;
+    dest->bmCapabilities = form->bmCapabilities;
+
+    t16 = ctx->fHostToLittleShort(form->wWidth);
+    memcpy(&dest->wWidth, &t16, sizeof(dest->wWidth));
+
+    t16 = ctx->fHostToLittleShort(form->wWidth);
+    memcpy(&dest->wWidth, &t16, sizeof(dest->wWidth));
+
+    t32 = ctx->fHostToLittleInt(form->dwMinBitRate);
+    memcpy(&dest->dwMinBitRate, &t32, sizeof(dest->dwMinBitRate));
+
+    t32 = ctx->fHostToLittleInt(form->dwMaxBitRate);
+    memcpy(&dest->dwMaxBitRate, &t32, sizeof(dest->dwMaxBitRate));
+
+    t32 = ctx->fHostToLittleInt(form->dwMaxVideoFrameBufferSize);
+    memcpy(&dest->dwMaxVideoFrameBufferSize, &t32, sizeof(dest->dwMaxVideoFrameBufferSize));
+
+    t32 = ctx->fHostToLittleInt(form->dwDefaultFrameInterval);
+    memcpy(&dest->dwDefaultFrameInterval, &t32, sizeof(dest->dwDefaultFrameInterval));
+
+    t32 = ctx->fHostToLittleInt(form->dwBytesPerLine);
+    memcpy(&dest->dwMaxVideoFrameBufferSize, &t32, sizeof(dest->dwMaxVideoFrameBufferSize));
+
+    dest->bFrameIntervalType = form->bFrameIntervalType;
+
+    drop = (uint8_t *) & dest + sizeof(dest); // Beginning of interval table
+    va_start(va, form);
+    for(; intervalsParams > 0; intervalsParams--) {
+      t32 = ctx->fHostToLittleInt(va_arg(va, uint32_t));
+      memcpy(drop, &t32, sizeof(t32));
+      drop += sizeof(t32);
+    }
+    va_end(va);
+  }
+
+  // Build the item 
+  _item_init(item);
+  item->size = needs;
+  item->address = ctx->append;
+
+  // Consume buffer space (or just count, in dry run mode)
+  ctx->append += needs;
+
+  return USBDESCBLDR_OK;
+}
+
+
