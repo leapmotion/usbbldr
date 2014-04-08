@@ -315,6 +315,23 @@ typedef struct usbdescbldr_ctx_s {
     usbdescbldr_item_t * item,
     usbdescbldr_camera_terminal_short_form_t * form);
 
+ 
+
+
+  typedef struct {
+    uint8_t  bTerminalID;
+    uint8_t  bAssocTerminal;
+    uint8_t   bSourceID;
+    uint8_t  iTerminal;
+  } usbdescbldr_streaming_out_terminal_short_form_t;
+
+  // The VC Streaming Terminal (an Output) Descriptor.
+
+  usbdescbldr_status_t
+    usbdescbldr_make_streaming_out_terminal_descriptor(usbdescbldr_ctx_t * ctx,
+    usbdescbldr_item_t * item,
+    usbdescbldr_streaming_out_terminal_short_form_t * form);
+
 
 
 

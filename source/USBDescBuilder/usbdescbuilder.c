@@ -313,7 +313,7 @@ usbdescbldr_make_device_descriptor(usbdescbldr_ctx_t *ctx,
     if(form->bcdUSB < 0x0300)
       dest->bMaxPacketSize0 = 64;
     else
-      dest->bMaxPacketSize0 = 5; // 2^5 == 64
+      dest->bMaxPacketSize0 = 9; // 2^9 == 512
 
     tShort = ctx->fHostToLittleShort(form->idVendor);
     memcpy(&dest->idVendor, &tShort, sizeof(dest->idVendor));
@@ -682,7 +682,7 @@ usbdescbldr_make_device_capability_descriptor(usbdescbldr_ctx_t * ctx,
       return USBDESCBLDR_NO_SPACE;
 
     dest = (USB_DEVICE_CAPABILITY_DESCRIPTOR *) ctx->append;
-    memset(dest, 0, sizeof(*dest));
+    memset(dest, 0, needs);
 
     dest->header.bLength = needs;
     dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_DEVICE_CAPABILITY;
@@ -730,7 +730,7 @@ usbdescbldr_make_standard_interface_descriptor(usbdescbldr_ctx_t * ctx,
       return USBDESCBLDR_NO_SPACE;
 
     dest = (USB_INTERFACE_DESCRIPTOR *) ctx->append;
-    memset(dest, 0, sizeof(*dest));
+    memset(dest, 0, needs);
 
     dest->header.bLength = needs;
     dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_INTERFACE;
@@ -782,7 +782,7 @@ usbdescbldr_make_endpoint_descriptor(usbdescbldr_ctx_t * ctx,
       return USBDESCBLDR_NO_SPACE;
 
     dest = (USB_ENDPOINT_DESCRIPTOR *) ctx->append;
-    memset(dest, 0, sizeof(*dest));
+    memset(dest, 0, needs);
 
     dest->bLength = needs;
     dest->bDescriptorType = USB_DESCRIPTOR_TYPE_INTERFACE;
@@ -830,7 +830,7 @@ usbdescbldr_ss_ep_companion_short_form_t * form)
       return USBDESCBLDR_NO_SPACE;
 
     dest = (USB_SS_EP_COMPANION_DESCRIPTOR *) ctx->append;
-    memset(dest, 0, sizeof(*dest));
+    memset(dest, 0, needs);
 
     dest->header.bLength = needs;
     dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_SS_EP_COMPANION;
@@ -874,7 +874,7 @@ usbdescbldr_make_interface_association_descriptor(usbdescbldr_ctx_t * ctx,
       return USBDESCBLDR_NO_SPACE;
 
     dest = (USB_INTERFACE_ASSOCIATION_DESCRIPTOR *) ctx->append;
-    memset(dest, 0, sizeof(*dest));
+    memset(dest, 0, needs);
 
     dest->header.bLength = needs;
     dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_INTERFACE_ASSOCIATION;
@@ -963,7 +963,7 @@ unsigned int dwClockFrequency,
     }
 
     dest = (USB_VC_CS_INTERFACE_DESCRIPTOR *) ctx->append;
-    memset(dest, 0, sizeof(*dest));
+    memset(dest, 0, needs);
 
     dest->header.bLength = needs;
     dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_VC_CS_INTERFACE;
@@ -976,7 +976,7 @@ unsigned int dwClockFrequency,
     memcpy(&dest->dwClockFrequency, &tInt, sizeof(dest->dwClockFrequency));
 
     // Tack on the bInCollection and interface(s)
-    drop = (uint8_t *) & dest + sizeof(dest);
+    drop = (uint8_t *) (dest + 1);
     *drop++ = bInCollection;
     for(; bInCollection > 0; bInCollection--)
       *drop++ = (uint8_t) va_arg(va, uint32_t);
@@ -1017,7 +1017,7 @@ usbdescbldr_camera_terminal_short_form_t * form)
       return USBDESCBLDR_NO_SPACE;
 
     dest = (USB_UVC_CAMERA_TERMINAL *) ctx->append;
-    memset(dest, 0, sizeof(*dest));
+    memset(dest, 0, needs);
 
     dest->header.bLength = needs;
     dest->header.bDescriptorType = UVC_CS_INTERFACE;
@@ -1056,6 +1056,57 @@ usbdescbldr_camera_terminal_short_form_t * form)
 
   return USBDESCBLDR_OK;
 }
+
+
+// The VC Streaming Output Terminal Descriptor.
+
+usbdescbldr_status_t
+usbdescbldr_make_streaming_out_terminal_descriptor(usbdescbldr_ctx_t * ctx,
+usbdescbldr_item_t * item,
+usbdescbldr_streaming_out_terminal_short_form_t * form)
+{
+  USB_UVC_STREAMING_OUT_TERMINAL *dest;
+  size_t needs;
+  uint32_t t32;
+
+  if(form == NULL || ctx == NULL || item == NULL)
+    return USBDESCBLDR_INVALID;
+
+  needs = sizeof(*dest);
+
+  // Construct
+  if(ctx->buffer != NULL) {
+    if(needs > _bufferAvailable(ctx))
+      return USBDESCBLDR_NO_SPACE;
+
+    dest = (USB_UVC_STREAMING_OUT_TERMINAL *) ctx->append;
+    memset(dest, 0, needs);
+
+    dest->header.bLength = needs;
+    dest->header.bDescriptorType = UVC_CS_INTERFACE;
+    dest->bDescriptorSubType = USB_INTERFACE_SUBTYPE_VC_OUTPUT_TERMINAL;
+
+    dest->bTerminalID = form->bTerminalID;
+
+    t32 = ctx->fHostToLittleShort(USB_UVC_OTT_STREAMING);
+    memcpy(&dest->wTerminalType, &t32, sizeof(dest->wTerminalType));
+
+    dest->bAssocTerminal = form->bAssocTerminal;
+    dest->bSourceID = form->bSourceID;
+    dest->iTerminal = form->iTerminal;
+  }
+
+  // Build the item 
+  _item_init(item);
+  item->size = needs;
+  item->address = ctx->append;
+
+  // Consume buffer space (or just count, in dry run mode)
+  ctx->append += needs;
+
+  return USBDESCBLDR_OK;
+}
+
 
 
 // The Selector Unit.
@@ -1099,7 +1150,7 @@ unsigned int bUnitID,
     }
 
     dest = (USB_UVC_VC_SELECTOR_UNIT *) ctx->append;
-    memset(dest, 0, sizeof(*dest));
+    memset(dest, 0, needs);
 
     dest->header.bLength = needs;
     dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_VC_CS_INTERFACE;
@@ -1108,7 +1159,7 @@ unsigned int bUnitID,
     dest->bUnitID = bUnitID;
     
     // Tack on the bNrInPins and interface(s)
-    drop = (uint8_t *) & dest + sizeof(dest);
+    drop = (uint8_t *) (dest + 1);
     *drop++ = bNrInPins;
     for(; bNrInPins > 0; bNrInPins--)
       *drop++ = (uint8_t) va_arg(va, uint32_t);
@@ -1152,7 +1203,7 @@ usbdescbldr_vc_processor_unit_short_form * form)
       return USBDESCBLDR_NO_SPACE;
 
     dest = (USB_UVC_VC_PROCESSING_UNIT *) ctx->append;
-    memset(dest, 0, sizeof(*dest));
+    memset(dest, 0, needs);
 
     dest->header.bLength = needs;
     dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_VC_CS_INTERFACE;
@@ -1231,7 +1282,7 @@ usbdescbldr_vc_extension_unit_short_form_t * form,
     }
 
     dest = (USB_UVC_VC_EXTENSION_UNIT *) ctx->append;
-    memset(dest, 0, sizeof(*dest));
+    memset(dest, 0, needs);
 
     dest->header.bLength = needs;
     dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_VC_CS_INTERFACE;
@@ -1248,7 +1299,7 @@ usbdescbldr_vc_extension_unit_short_form_t * form,
     dest->bNumControls = form->bNumControls;
     dest->bNrInPins = bNrInPins;
 
-    drop = (uint8_t *) & dest + sizeof(dest);
+    drop = (uint8_t *) (dest + 1);
 
     // Tack on the sources(s): baSourceID
     *drop++ = bNrInPins;
@@ -1300,7 +1351,7 @@ uint16_t wMaxTransferSize)
       return USBDESCBLDR_NO_SPACE;
 
     dest = (USB_VC_CS_INTR_EP_DESCRIPTOR *) ctx->append;
-    memset(dest, 0, sizeof(*dest));
+    memset(dest, 0, needs);
 
     dest->header.bLength = needs;
     dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_VC_CS_ENDPOINT;
@@ -1365,7 +1416,7 @@ usbdescbldr_vs_if_input_header_short_form_t * form,
     }
 
     dest = (USB_UVC_VS_INPUT_HEADER_DESCRIPTOR *) ctx->append;
-    memset(dest, 0, sizeof(*dest));
+    memset(dest, 0, needs);
 
     dest->header.bLength = needs;
     dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_VC_CS_INTERFACE;
@@ -1380,7 +1431,7 @@ usbdescbldr_vs_if_input_header_short_form_t * form,
     dest->bTriggerUsage = form->bTriggerUsage;
     dest->bControlSize = sizeof(uint8_t); // Not very general, but standardized (for now)
 
-    drop = (uint8_t *) & dest + sizeof(dest); // Beginning of bmaControls
+    drop = (uint8_t *) (dest + 1); // Beginning of bmaControls
 
     // Tack on the Controls. These are 8-bit values, but were upcast to int32s by the call
     for(; bNumFormats > 0; bNumFormats--)
@@ -1443,7 +1494,7 @@ usbdescbldr_vs_if_output_header_short_form_t * form,
     }
 
     dest = (USB_UVC_VS_OUTPUT_HEADER_DESCRIPTOR *) ctx->append;
-    memset(dest, 0, sizeof(*dest));
+    memset(dest, 0, needs);
 
     dest->header.bLength = needs;
     dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_VC_CS_INTERFACE;
@@ -1454,7 +1505,7 @@ usbdescbldr_vs_if_output_header_short_form_t * form,
     dest->bTerminalLink = form->bTerminalLink;
     dest->bControlSize = sizeof(uint8_t); // Not very general, but standardized (for now)
 
-    drop = (uint8_t *) & dest + sizeof(dest); // Beginning of bmaControls
+    drop = (uint8_t *) (dest + 1); // Beginning of bmaControls
 
     // Tack on the Controls. These are 8-bit values, but were upcast to int32s by the call
     for(; bNumFormats > 0; bNumFormats--)
@@ -1499,7 +1550,7 @@ usbdescbldr_uvc_vs_format_frame_based_short_form_t * form)
       return USBDESCBLDR_NO_SPACE;
 
     dest = (UVC_VS_FORMAT_FRAME_DESCRIPTOR *) ctx->append;
-    memset(dest, 0, sizeof(*dest));
+    memset(dest, 0, needs);
 
     dest->header.bLength = needs;
     dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_VC_CS_INTERFACE;
@@ -1556,7 +1607,7 @@ usbdescbldr_uvc_vs_format_uncompressed_short_form_t * form)
       return USBDESCBLDR_NO_SPACE;
 
     dest = (UVC_VS_FORMAT_UNCOMPRESSED_DESCRIPTOR *) ctx->append;
-    memset(dest, 0, sizeof(*dest));
+    memset(dest, 0, needs);
 
     dest->header.bLength = needs;
     dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_VC_CS_INTERFACE;
@@ -1635,7 +1686,7 @@ usbdescbldr_uvc_vs_frame_frame_based_short_form_t * form,
     }
 
     dest = (UVC_VS_FRAME_FRAME_DESCRIPTOR *) ctx->append;
-    memset(dest, 0, sizeof(*dest));
+    memset(dest, 0, needs);
 
     dest->header.bLength = needs;
     dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_VC_CS_INTERFACE;
@@ -1664,7 +1715,7 @@ usbdescbldr_uvc_vs_frame_frame_based_short_form_t * form,
 
     dest->bFrameIntervalType = form->bFrameIntervalType;
 
-    drop = (uint8_t *) & dest + sizeof(dest); // Beginning of interval table
+    drop = (uint8_t *) (dest + 1); // Beginning of interval table
     va_start(va, form);
     for(; intervalsParams > 0; intervalsParams--) {
       t32 = ctx->fHostToLittleInt(va_arg(va, uint32_t));
@@ -1728,7 +1779,7 @@ usbdescbldr_uvc_vs_frame_uncompressed_short_form_t * form,
     }
 
     dest = (UVC_VS_FRAME_UNCOMPRESSED_DESCRIPTOR *) ctx->append;
-    memset(dest, 0, sizeof(*dest));
+    memset(dest, 0, needs);
 
     dest->header.bLength = needs;
     dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_VC_CS_INTERFACE;
@@ -1760,7 +1811,7 @@ usbdescbldr_uvc_vs_frame_uncompressed_short_form_t * form,
 
     dest->bFrameIntervalType = form->bFrameIntervalType;
 
-    drop = (uint8_t *) & dest + sizeof(dest); // Beginning of interval table
+    drop = (uint8_t *) (dest + 1); // Beginning of interval table
     va_start(va, form);
     for(; intervalsParams > 0; intervalsParams--) {
       t32 = ctx->fHostToLittleInt(va_arg(va, uint32_t));

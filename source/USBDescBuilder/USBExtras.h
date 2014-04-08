@@ -178,6 +178,21 @@ typedef struct _USB_UVC_CAMERA_TERMINAL
 // This next one is a guess obtained from a MacOS camera descriptor
 static const uint16_t USB_UVC_ITT_CAMERA = 0x0201;
 
+// Streaming Output terminal
+typedef struct _USB_UVC_STREAMING_OUT_TERMINAL
+{
+  USB_DESCRIPTOR_HEADER header;
+  uint8_t  bDescriptorSubType;       //0x03
+  uint8_t  bTerminalID;
+  uint16_t wTerminalType;
+  uint8_t  bAssocTerminal;
+  uint8_t  bSourceID;
+  uint8_t  iTerminal;
+} USB_UVC_STREAMING_OUT_TERMINAL;
+
+// Copied from previous work -- need the actual document..
+static const uint16_t USB_UVC_OTT_STREAMING = 0x0101;
+
 
 // Selector unit
 typedef struct _USB_UVC_VC_SELECTOR_UNIT
