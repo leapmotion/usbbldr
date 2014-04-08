@@ -182,25 +182,12 @@ createUSB30Configuration(void)
     FLAG(s);
   }
 
-  // Interface 1 (streaming)
-  if(IS_OK(s)) {
-    usbdescbldr_standard_interface_short_form_t sf;
-    memset(&sf, 0, sizeof(sf));
-    sf.bInterfaceNumber = 1;
-    sf.bAlternateSetting = 0;
-    sf.bNumEndpoints = 0x01;
-    sf.bInterfaceClass = USB_INTERFACE_CC_VIDEO;
-    sf.bInterfaceSubClass = USB_INTERFACE_VC_SC_VIDEOSTREAMING;
-    sf.bInterfaceProtocol = USB_INTERFACE_VC_PC_PROTOCOL_UNDEFINED;
-    s = usbdescbldr_make_standard_interface_descriptor(c, &it_vs_if, &sf);
-  } else {
-    FLAG(s);
-  }
 
   // Video Control Interface Descriptor
   if(IS_OK(s)) {
     s = usbdescbldr_make_vc_cs_interface_descriptor(c, &it_vc_hdr, 0x000003e8, /* intf: */ 0, USBDESCBLDR_LIST_END);
-  } else {
+  }
+  else {
     FLAG(s);
   }
 
@@ -212,7 +199,8 @@ createUSB30Configuration(void)
     sf.bAssocTerminal = 0x00;
     sf.controls = (0x00 << 16) | (0x02 << 8) | (0x28 << 0);  // XXX: ok; this is ugly.
     s = usbdescbldr_make_camera_terminal_descriptor(c, &it_vc_input, &sf);
-  } else {
+  }
+  else {
     FLAG(s);
   }
 
@@ -224,7 +212,8 @@ createUSB30Configuration(void)
     sf.bSourceID = CAMERA_OUTPUT_TERMINAL;
     sf.wMaxMultiplier = 0;
     s = usbdescbldr_make_vc_processor_unit(c, &it_vc_pu, &sf);
-  } else {
+  }
+  else {
     FLAG(s);
   }
 
@@ -232,7 +221,7 @@ createUSB30Configuration(void)
   if(IS_OK(s)) {
     usbdescbldr_vc_extension_unit_short_form_t sf;
     uint8_t bmControls[3];    // Taking 'three' from prior work.
-    memset(& sf, 0, sizeof(sf));
+    memset(&sf, 0, sizeof(sf));
     memset(bmControls, 0, sizeof(bmControls));
     bmControls[0] = 0x01;
     sf.bUnitID = VC_EXTENSION_UNIT; // 0x06
@@ -241,7 +230,8 @@ createUSB30Configuration(void)
     sf.bmControls = bmControls;
     // Pass in the list of input sources:
     s = usbdescbldr_make_extension_unit_descriptor(c, &it_vc_eu, &sf, VIDEO_PU_UNIT, USBDESCBLDR_LIST_END);
-  } else {
+  }
+  else {
     FLAG(s);
   }
 
@@ -252,8 +242,9 @@ createUSB30Configuration(void)
     sf.bTerminalID = STREAMING_OUTPUT_TERMINAL;
     sf.bAssocTerminal = 0;
     sf.bSourceID = VC_EXTENSION_UNIT;
-    s = usbdescbldr_make_streaming_out_terminal_descriptor(c, & it_vc_output, & sf);
-  } else {
+    s = usbdescbldr_make_streaming_out_terminal_descriptor(c, &it_vc_output, &sf);
+  }
+  else {
     FLAG(s);
   }
 
@@ -266,26 +257,43 @@ createUSB30Configuration(void)
     sf.wMaxPacketSize = 1024;
     sf.bInterval = 0x01;
     s = usbdescbldr_make_endpoint_descriptor(c, &it_vc_ep, &sf);
-  } else {
+  }
+  else {
     FLAG(s);
   }
 
-  // The Streaming Endpoint
+  // Video Control super-speed EP companion
   if(IS_OK(s)) {
-    usbdescbldr_endpoint_short_form_t sf;
+    usbdescbldr_ss_ep_companion_short_form_t sf;
     memset(&sf, 0, sizeof(sf));
-    sf.bEndpointAddress = 0x82;
-    sf.bmAttributes = 0x02;
-    sf.wMaxPacketSize = 1024;
-    sf.bInterval = 0x01;
-    s = usbdescbldr_make_endpoint_descriptor(c, &it_vs_ep, &sf);
-  } else {
+    sf.bMaxBurst = 0;
+    sf.bmAttributes = 0;
+    sf.wBytesPerInterval = 1024;
+    s = usbdescbldr_make_ss_ep_companion_descriptor(c, &it_vc_ss_companion, &sf);
+  }
+  else {
     FLAG(s);
   }
 
   // The Control Interrupt EP
   if(IS_OK(s)) {
     s = usbdescbldr_make_vc_interrupt_ep(c, &it_cs_ep_intr, 64);
+  }
+  else {
+    FLAG(s);
+  }
+
+  // Interface 1 (streaming)
+  if(IS_OK(s)) {
+    usbdescbldr_standard_interface_short_form_t sf;
+    memset(&sf, 0, sizeof(sf));
+    sf.bInterfaceNumber = 1;
+    sf.bAlternateSetting = 0;
+    sf.bNumEndpoints = 0x01;
+    sf.bInterfaceClass = USB_INTERFACE_CC_VIDEO;
+    sf.bInterfaceSubClass = USB_INTERFACE_VC_SC_VIDEOSTREAMING;
+    sf.bInterfaceProtocol = USB_INTERFACE_VC_PC_PROTOCOL_UNDEFINED;
+    s = usbdescbldr_make_standard_interface_descriptor(c, &it_vs_if, &sf);
   } else {
     FLAG(s);
   }
@@ -303,7 +311,8 @@ createUSB30Configuration(void)
     sf.bTriggerUsage = 0;
     // The variable part that follows (the controls) is mystical. Size and count are both unclear. Rethink.
     s = usbdescbldr_make_uvc_vs_if_input_header(c, &it_vs_header, &sf, 0 /* controls */, USBDESCBLDR_LIST_END);
-  } else {
+  }
+  else {
     FLAG(s);
   }
 
@@ -321,7 +330,8 @@ createUSB30Configuration(void)
     sf.bmInterlaceFlags = 0;
     sf.bCopyProtect = 0;
     s = usbdescbldr_make_uvc_vs_format_uncompressed(c, &it_vs_fmt_uncomp, &sf);
-  } else {
+  }
+  else {
     FLAG(s);
   }
 
@@ -338,7 +348,8 @@ createUSB30Configuration(void)
     sf.dwMaxVideoFrameBufferSize = 0x0004B000;
     sf.dwDefaultFrameInterval = 0x0000FEA5;
     s = usbdescbldr_make_uvc_vs_frame_uncompressed(c, &it_vs_frm_uncomp[sf.bFrameIndex - 1], &sf, sf.dwDefaultFrameInterval, USBDESCBLDR_LIST_END);
-  } else {
+  }
+  else {
     FLAG(s);
   }
 
@@ -355,7 +366,8 @@ createUSB30Configuration(void)
     sf.dwMaxVideoFrameBufferSize = 0x00025800;
     sf.dwDefaultFrameInterval = 0x0000846A;
     s = usbdescbldr_make_uvc_vs_frame_uncompressed(c, &it_vs_frm_uncomp[sf.bFrameIndex - 1], &sf, sf.dwDefaultFrameInterval, USBDESCBLDR_LIST_END);
-  } else {
+  }
+  else {
     FLAG(s);
   }
 
@@ -372,7 +384,8 @@ createUSB30Configuration(void)
     sf.dwMaxVideoFrameBufferSize = 0x00258000;
     sf.dwDefaultFrameInterval = 0x0003640E;
     s = usbdescbldr_make_uvc_vs_frame_uncompressed(c, &it_vs_frm_uncomp[sf.bFrameIndex - 1], &sf, sf.dwDefaultFrameInterval, USBDESCBLDR_LIST_END);
-  } else {
+  }
+  else {
     FLAG(s);
   }
 
@@ -389,7 +402,8 @@ createUSB30Configuration(void)
     sf.dwMaxVideoFrameBufferSize = 0x0012C000;
     sf.dwDefaultFrameInterval = 0x0001B207;
     s = usbdescbldr_make_uvc_vs_frame_uncompressed(c, &it_vs_frm_uncomp[sf.bFrameIndex - 1], &sf, sf.dwDefaultFrameInterval, USBDESCBLDR_LIST_END);
-  } else {
+  }
+  else {
     FLAG(s);
   }
 
@@ -406,7 +420,8 @@ createUSB30Configuration(void)
     sf.dwMaxVideoFrameBufferSize = 0x00096000;
     sf.dwDefaultFrameInterval = 0x0000E5C7;
     s = usbdescbldr_make_uvc_vs_frame_uncompressed(c, &it_vs_frm_uncomp[sf.bFrameIndex - 1], &sf, sf.dwDefaultFrameInterval, USBDESCBLDR_LIST_END);
-  } else {
+  }
+  else {
     FLAG(s);
   }
 
@@ -423,22 +438,24 @@ createUSB30Configuration(void)
     sf.dwMaxVideoFrameBufferSize = 0x0004B000;
     sf.dwDefaultFrameInterval = 0x00007C02;
     s = usbdescbldr_make_uvc_vs_frame_uncompressed(c, &it_vs_frm_uncomp[sf.bFrameIndex - 1], &sf, sf.dwDefaultFrameInterval, USBDESCBLDR_LIST_END);
-  } else {
+  }
+  else {
     FLAG(s);
   }
 
-  // Video Control super-speed EP companion
+  // The Streaming Endpoint
   if(IS_OK(s)) {
-    usbdescbldr_ss_ep_companion_short_form_t sf;
+    usbdescbldr_endpoint_short_form_t sf;
     memset(&sf, 0, sizeof(sf));
-    sf.bMaxBurst = 0;
-    sf.bmAttributes = 0;
-    sf.wBytesPerInterval = 1024;
-    s = usbdescbldr_make_ss_ep_companion_descriptor(c, &it_vc_ss_companion, &sf);
+    sf.bEndpointAddress = 0x82;
+    sf.bmAttributes = 0x02;
+    sf.wMaxPacketSize = 1024;
+    sf.bInterval = 0x01;
+    s = usbdescbldr_make_endpoint_descriptor(c, &it_vs_ep, &sf);
   } else {
     FLAG(s);
   }
-
+   
   // Video Stream super-speed EP companion
   if(IS_OK(s)) {
     usbdescbldr_ss_ep_companion_short_form_t sf;
@@ -450,7 +467,6 @@ createUSB30Configuration(void)
   } else {
     FLAG(s);
   }
-  
 #undef IS_OK
 #undef FLAG
 }
