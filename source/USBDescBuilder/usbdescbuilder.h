@@ -66,18 +66,17 @@ typedef struct usbdescbldr_ctx_s {
   // The 'handle' by which callers store the results of maker calls. Callers
   // 'know' this structure only to provide them as return (out) parameters;
   // never should they modify the contents.
-#define USBDESCBLDR_MAX_CHILDREN 8
+#define USBDESCBLDR_MAX_CHILDREN 16
   typedef struct usbdescbldr_item_s {
     void *                      address;        // Where it is stored
     unsigned int                index;          // Index, interface number, endpoint number, anything of this nature
-    size_t                      size;           // Size of item itself
-    size_t                      totalSize;      // Size of item and all children (may be easier to compute this only when done)
+    uint16_t                    size;           // Size of item itself
+    uint16_t *                  totalSize;      // Size of item and all children, or NULL if not kept
     unsigned int                items;          // Number iof sub-items ('children')
     struct usbdescbldr_item_s * item[USBDESCBLDR_MAX_CHILDREN];
   } usbdescbldr_item_t;
 
-
-
+ 
   // Setup and teardown
 
   // Reset internal state and begin a new descriptor.
@@ -213,6 +212,7 @@ typedef struct usbdescbldr_ctx_s {
 
   typedef struct {
     uint8_t  bNumInterfaces;
+    uint8_t  bConfigurationValue;
     uint8_t  iConfiguration;
     uint8_t  bmAttributes;
     uint8_t  bMaxPower;
@@ -338,7 +338,8 @@ typedef struct usbdescbldr_ctx_s {
   usbdescbldr_status_t
     usbdescbldr_make_vc_selector_unit(usbdescbldr_ctx_t * ctx,
     usbdescbldr_item_t * item,
-    unsigned int bUnitID,
+    uint8_t iSelector, // string index
+    uint8_t bUnitID,
     ... // Terminated List of Input (Source) Pin(s)
     );
 

@@ -11,6 +11,8 @@
 #include <stdint.h>
 #include "USB.h"
 
+#define UVC_CLASS 0x0150    // 1.5, conveniently in BCD
+
 #pragma pack(push, 1)
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Define
@@ -209,7 +211,7 @@ typedef struct _USB_UVC_VC_SELECTOR_UNIT
 
 
 // Processing unit
-typedef struct _USB_UVC_VC_PROCESSING_UNIT           //TODO: does not parse??? Chen (was missing bmVid. -wt)
+typedef struct _USB_UVC_VC_PROCESSING_UNIT
 {
   USB_DESCRIPTOR_HEADER header;
   uint8_t  bDescriptorSubType;       //0x05
@@ -382,30 +384,12 @@ typedef struct _UVC_VS_FRAME_UNCOMPRESSED_DESCRIPTOR
 } UVC_VS_FRAME_UNCOMPRESSED_DESCRIPTOR;
 
 
-// Configuration processes
-typedef struct _USB_HS_CONFIGURATION_PROCESS
-{
-  USB_CONFIG_DESCRIPTOR                               configDesc;
-  USB_INTERFACE_ASSOCIATION_DESCRIPTOR                interfaceAssocDesc;
-  USB_INTERFACE_DESCRIPTOR                            vcInterfaceDesc;
-  USB_UVC_VC_HEADER_DESCRIPTOR                        vcHeaderDesc;
-  USB_UVC_VC_INPUT_TERMINAL                           vcITDesc;
-  USB_UVC_VC_PROCESSING_UNIT                          vcPUDesc;
-  USB_UVC_VC_EXTENSION_UNIT                           vcEUDesc;
-  USB_UVC_VC_OUTPUT_TERMINAL                          vcOTDesc;
-  USB_ENDPOINT_DESCRIPTOR                             vcEndpointDesc;
-  USB_CLASS_SPECIFIC_INTERRUPT_ENDPOINT_DESCRIPTOR    csInterruptEndpointDesc;
-  USB_INTERFACE_DESCRIPTOR                            vsInterfaceDesc;
-  USB_UVC_VS_INPUT_HEADER_DESCRIPTOR                  vsHeaderDesc;
-  USB_UVC_VS_FORMAT_UNCOMPRESSED_DESCRIPTOR           vsFormatUncompressedDesc;
-  UVC_VS_FRAME_UNCOMPRESSED_DESCRIPTOR                vsFrameUncompressedDesc[NUM_FRAME_DESCRIPTOR];
-  USB_ENDPOINT_DESCRIPTOR                             vsEndpointDesc;
-} USB_HS_CONFIGURATION_PROCESS;
 
 typedef struct _USB_SS_CONFIGURATION_PROCESS
 {
   USB_CONFIG_DESCRIPTOR                               configDesc;
   USB_INTERFACE_ASSOCIATION_DESCRIPTOR                interfaceAssocDesc;
+
   USB_INTERFACE_DESCRIPTOR                            vcInterfaceDesc;
   USB_UVC_VC_HEADER_DESCRIPTOR                        vcHeaderDesc;
   USB_UVC_VC_INPUT_TERMINAL                           vcITDesc;
@@ -415,6 +399,7 @@ typedef struct _USB_SS_CONFIGURATION_PROCESS
   USB_ENDPOINT_DESCRIPTOR                             vcEndpointDesc;
   USB_SS_EP_COMPANION_DESCRIPTOR                      vcSSCompanionDesc;
   USB_CLASS_SPECIFIC_INTERRUPT_ENDPOINT_DESCRIPTOR    csInterruptEndpointDesc;
+
   USB_INTERFACE_DESCRIPTOR                            vsInterfaceDesc;
   USB_UVC_VS_INPUT_HEADER_DESCRIPTOR                  vsHeaderDesc;
   USB_UVC_VS_FORMAT_UNCOMPRESSED_DESCRIPTOR           vsFormatUncompressedDesc;

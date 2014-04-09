@@ -8,7 +8,36 @@ static const uint8_t  VC_EXTENSION_UNIT = 0x06;
 static const GUID     EXTENSION_GUID = {  0x8E9093EF, 0x97EA, 0x49E1, { 0x83, 0x06, 0x9F, 0x6B, 0x69, 0x6A, 0x1A, 0xEE } };
 static const GUID     VS_FORMAT_UNCOMPRESSED = { 0x32595559, 0x0000, 0x0010, { 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 } };
 
-static const uint32_t UNCOMPRESSED_FRAME_FORMATS = 7;   // XXX this is only 6 in the project, due to no 7th frame in 9M021
+static const uint32_t UNCOMPRESSED_FRAME_FORMATS = 7;
+
+
+static void
+emit(usbdescbldr_ctx_t *ctx, char *s, usbdescbldr_item_t *ip)
+{
+  uint16_t  t16, count, length;
+  
+  t16 = ip->size;
+  if(ip->totalSize != NULL) {
+    memcpy(&t16, ip->totalSize, sizeof(t16));
+    t16 = ctx->fLittleShortToHost(t16);
+  }
+  if(t16 == 0) t16 = ip->size;
+  length = t16;
+
+  printf("uint8_t %s[] = {  // length %lu", s, length);
+
+  for(count = 0; count < length; count++) {
+    if(count > 0)
+      printf(",");
+    if(count % 8 == 0)
+      printf("\n\t");
+    else
+      printf(" ");
+    printf("0x%02X", ((uint8_t *) ip->address)[count]);
+  }
+  printf("};\n");
+}
+
 static void
 createUSB30Configuration(void)
 {
@@ -34,15 +63,22 @@ createUSB30Configuration(void)
     it_vs_frm_uncomp[UNCOMPRESSED_FRAME_FORMATS],    // vs: frame (uncompressed) descr.
     it_vc_ss_companion,     // vc: superspeed companion EP descr.
     it_vs_ss_companion;     // vs: superspeed companion EP descr.
-     
-  usbdescbldr_item_t
-    it_s_languages,         // string[0] - LANGs
-    it_s_manufacturer,      // string, manuf.
-    it_s_serialNo,          // string, serial number
-    it_s_product,           // string, product
-    it_s_device,            // string, device
-    it_s_config;            // string, config
+    
+  // The string values we will make:
+  enum {
+    SI_LANGUAGES,     // Always zero'th
 
+    SI_MANUFACTURER,
+    SI_SERIALNO,
+    SI_PRODUCT,
+    SI_DEVICE,
+    SI_CONFIG,
+
+    SI_COUNT          // Always final
+  };
+  // .. and where they are held:
+  usbdescbldr_item_t  it_string[SI_COUNT];
+   
   uint8_t
     i_s_manufacturer,       // Generated string index values..
     i_s_serialNo,
@@ -68,37 +104,37 @@ createUSB30Configuration(void)
   // Strings first - we will need the string indices for other items.
 
   if(IS_OK(s)) {
-    s = usbdescbldr_make_languageIDs(c, &it_s_languages, 0x0409 /* EN */, USBDESCBLDR_LIST_END);
+    s = usbdescbldr_make_languageIDs(c, &it_string[SI_LANGUAGES], 0x0409 /* EN */, USBDESCBLDR_LIST_END);
   } else {
     FLAG(s);
   }
 
   if(IS_OK(s)) {
-    s = usbdescbldr_make_string_descriptor(c, &it_s_manufacturer, &i_s_manufacturer, "Leap Motion");
+    s = usbdescbldr_make_string_descriptor(c, &it_string[SI_MANUFACTURER], &i_s_manufacturer, "Leap Motion");
   } else {
     FLAG(s);
   }
 
   if(IS_OK(s)) {
-    s = usbdescbldr_make_string_descriptor(c, &it_s_serialNo, &i_s_serialNo, "MH00007");
+    s = usbdescbldr_make_string_descriptor(c, &it_string[SI_SERIALNO], &i_s_serialNo, "MH00007");
   } else {
     FLAG(s);
   }
 
   if(IS_OK(s)) {
-    s = usbdescbldr_make_string_descriptor(c, &it_s_device, &i_s_device, "Leap Motion Test Device");
+    s = usbdescbldr_make_string_descriptor(c, &it_string[SI_DEVICE], &i_s_device, "Leap Motion Test Device");
   } else {
     FLAG(s);
   }
 
   if(IS_OK(s)) {
-    s = usbdescbldr_make_string_descriptor(c, &it_s_config, &i_s_config, "Leap Motion Test Config");
+    s = usbdescbldr_make_string_descriptor(c, &it_string[SI_CONFIG], &i_s_config, "Leap Motion Test Config");
   } else {
     FLAG(s);
   }
 
   if(IS_OK(s)) {
-    s = usbdescbldr_make_string_descriptor(c, &it_s_product, &i_s_product, "Meadow Hawk");
+    s = usbdescbldr_make_string_descriptor(c, &it_string[SI_PRODUCT], &i_s_product, "Meadow Hawk");
   } else {
     FLAG(s);
   }
@@ -143,8 +179,7 @@ createUSB30Configuration(void)
     usbdescbldr_device_configuration_short_form_t sf;
     memset(&sf, 0, sizeof(sf));
     sf.bNumInterfaces = 2;
-    // Here is where Bldr may go too far; it's going to assign the
-    // configuration value.. and we probably want to be in control of that.
+    sf.bConfigurationValue = 1;
     sf.iConfiguration = i_s_config;
     sf.bmAttributes = 0x80;
     sf.bMaxPower = 100;
@@ -185,7 +220,7 @@ createUSB30Configuration(void)
 
   // Video Control Interface Descriptor
   if(IS_OK(s)) {
-    s = usbdescbldr_make_vc_cs_interface_descriptor(c, &it_vc_hdr, 0x000003e8, /* intf: */ 0, USBDESCBLDR_LIST_END);
+    s = usbdescbldr_make_vc_cs_interface_descriptor(c, &it_vc_hdr, 0x000003e8, /* intf: */ 1, USBDESCBLDR_LIST_END);
   }
   else {
     FLAG(s);
@@ -211,6 +246,7 @@ createUSB30Configuration(void)
     sf.bUnitID = VIDEO_PU_UNIT;
     sf.bSourceID = CAMERA_OUTPUT_TERMINAL;
     sf.wMaxMultiplier = 0;
+    sf.controls = (0x7b << 0) | (0x02 << 8) | (0x00 << 16); // XXX: rethink this
     s = usbdescbldr_make_vc_processor_unit(c, &it_vc_pu, &sf);
   }
   else {
@@ -224,9 +260,10 @@ createUSB30Configuration(void)
     memset(&sf, 0, sizeof(sf));
     memset(bmControls, 0, sizeof(bmControls));
     bmControls[0] = 0x01;
-    sf.bUnitID = VC_EXTENSION_UNIT; // 0x06
+    sf.bUnitID = VC_EXTENSION_UNIT;
     sf.guidExtensionCode = EXTENSION_GUID;
     sf.bNumControls = 0;
+    sf.bControlSize = sizeof(bmControls);
     sf.bmControls = bmControls;
     // Pass in the list of input sources:
     s = usbdescbldr_make_extension_unit_descriptor(c, &it_vc_eu, &sf, VIDEO_PU_UNIT, USBDESCBLDR_LIST_END);
@@ -335,10 +372,30 @@ createUSB30Configuration(void)
     FLAG(s);
   }
 
+  // Note: a 'helper table' (array of struct) would make this next section much more compact
+  // (it would be a parameterized loop).
   if(IS_OK(s)) {
     usbdescbldr_uvc_vs_frame_uncompressed_short_form_t sf;
     memset(&sf, 0, sizeof(sf));
     sf.bFrameIndex = 1;
+    sf.bFrameIntervalType = 1;    // Not continuous; a single interval.
+    sf.bmCapabilities = 0x00;
+    sf.wWidth = 640;
+    sf.wHeight = 480;
+    sf.dwMinBitRate = 0x16E90000;
+    sf.dwMaxBitRate = 0x16E90000;
+    sf.dwMaxVideoFrameBufferSize = 0x00096000;
+    sf.dwDefaultFrameInterval = 0x0001F385;
+    s = usbdescbldr_make_uvc_vs_frame_uncompressed(c, &it_vs_frm_uncomp[sf.bFrameIndex - 1], &sf, sf.dwDefaultFrameInterval, USBDESCBLDR_LIST_END);
+  }
+  else {
+    FLAG(s);
+  }
+
+  if(IS_OK(s)) {
+    usbdescbldr_uvc_vs_frame_uncompressed_short_form_t sf;
+    memset(&sf, 0, sizeof(sf));
+    sf.bFrameIndex = 2;
     sf.bFrameIntervalType = 1;    // Not continuous; a single interval.
     sf.bmCapabilities = 0x00;
     sf.wWidth = 640;
@@ -356,7 +413,7 @@ createUSB30Configuration(void)
   if(IS_OK(s)) {
     usbdescbldr_uvc_vs_frame_uncompressed_short_form_t sf;
     memset(&sf, 0, sizeof(sf));
-    sf.bFrameIndex = 2;
+    sf.bFrameIndex = 3;
     sf.bFrameIntervalType = 1;    // Not continuous; a single interval.
     sf.bmCapabilities = 0x00;
     sf.wWidth = 640;
@@ -374,7 +431,7 @@ createUSB30Configuration(void)
   if(IS_OK(s)) {
     usbdescbldr_uvc_vs_frame_uncompressed_short_form_t sf;
     memset(&sf, 0, sizeof(sf));
-    sf.bFrameIndex = 3;
+    sf.bFrameIndex = 4;
     sf.bFrameIntervalType = 1;    // Not continuous; a single interval.
     sf.bmCapabilities = 0x00;
     sf.wWidth = 1280;
@@ -392,7 +449,7 @@ createUSB30Configuration(void)
   if(IS_OK(s)) {
     usbdescbldr_uvc_vs_frame_uncompressed_short_form_t sf;
     memset(&sf, 0, sizeof(sf));
-    sf.bFrameIndex = 4;
+    sf.bFrameIndex = 5;
     sf.bFrameIntervalType = 1;    // Not continuous; a single interval.
     sf.bmCapabilities = 0x00;
     sf.wWidth = 1280;
@@ -410,7 +467,7 @@ createUSB30Configuration(void)
   if(IS_OK(s)) {
     usbdescbldr_uvc_vs_frame_uncompressed_short_form_t sf;
     memset(&sf, 0, sizeof(sf));
-    sf.bFrameIndex = 5;
+    sf.bFrameIndex = 6;
     sf.bFrameIntervalType = 1;    // Not continuous; a single interval.
     sf.bmCapabilities = 0x00;
     sf.wWidth = 1280;
@@ -428,7 +485,7 @@ createUSB30Configuration(void)
   if(IS_OK(s)) {
     usbdescbldr_uvc_vs_frame_uncompressed_short_form_t sf;
     memset(&sf, 0, sizeof(sf));
-    sf.bFrameIndex = 6;
+    sf.bFrameIndex = 7;
     sf.bFrameIntervalType = 1;    // Not continuous; a single interval.
     sf.bmCapabilities = 0x00;
     sf.wWidth = 1280;
@@ -467,6 +524,63 @@ createUSB30Configuration(void)
   } else {
     FLAG(s);
   }
+
+
+  // Now, the buffer is laid out and populated. Establish the structure
+  // (hierarchy) within the descriptors. This is done 'bottom-up' to
+  // allow proper percolation of values to higher and higher levels.
+
+  // Streaming header envelops format descriptor
+  if(IS_OK(s))
+    s = usbdescbldr_add_children(c, &it_vs_header, &it_vs_fmt_uncomp, NULL);
+  else {
+    FLAG(s);
+  }
+
+  // Streaming header envelops frame descriptor(s)
+  for(uint32_t f = 0; f < UNCOMPRESSED_FRAME_FORMATS; f++) {
+    if(IS_OK(s))
+      s = usbdescbldr_add_children(c, &it_vs_header, &it_vs_frm_uncomp[f], NULL);
+    else {
+      FLAG(s);
+    }
+  }
+
+  // Control header envelops control units, endpoint and SS companion, and specific interrupt EP
+  if(IS_OK(s))
+    s = usbdescbldr_add_children(c, &it_vc_hdr, &it_vc_input,
+                                 &it_vc_pu, &it_vc_eu, &it_vc_output, &it_vc_ep, &it_vc_ss_companion,
+                                 &it_cs_ep_intr, NULL);
+  else {
+    FLAG(s);
+  }
+
+  // Configuration envelops IAD, VC I/F and header, VS I/F and header
+  if(IS_OK(s))
+    s = usbdescbldr_add_children(c, &it_config, &it_iad, &it_vc_if, &it_vc_hdr, &it_vs_if, &it_vs_header, NULL);
+  else {
+    FLAG(s);
+  }
+
+
+  // Emit the buffer contents.
+  emit(c, "deviceDesc", &it_device);
+  emit(c, "configurationDesc", &it_config);
+
+  // Emit all strings
+  for(uint32_t si = SI_LANGUAGES; si < SI_COUNT; si++) {
+    char symbol[sizeof("stringDesc000")];
+    uint8_t index = it_string[si].index;
+    // XXX make accessor for '.index'
+    if(sprintf(symbol, "stringDesc%03u", index) > sizeof(symbol)) {
+      fprintf(stderr, "String index is out of range (%u)\n", index);
+    }
+    else {
+      emit(c, symbol, &it_string[si]);
+    }
+  }
+
+
 #undef IS_OK
 #undef FLAG
 }

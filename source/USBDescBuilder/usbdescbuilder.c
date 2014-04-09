@@ -12,10 +12,6 @@
 #include "USBExtras.h"
 #include "usbdescbuilder.h"
 
-// Next: do some of the basics and make sure that the ideas, when detailed into code,
-// actually are decent ideas. If so, complete the API.
-
-// Ongoing: add the remaining descriptor types (... work ...)
 // Ongoing: this is a library. The API must be documented (fairly well)
 // Ongoing: the whole smart-grouping part
 
@@ -108,27 +104,68 @@ _item_init(usbdescbldr_item_t * item)
 
 
 // Make a set of items subordinate to one parent item. This
-// is used to both place the items contiguously, in order,
-// in memory after the parent item and to allow the parent
-// item to account for their accumulated lengths.
+// is used to allow the parent item to account for their accumulated lengths.
 // Pass the context, a result item, and the subordinate items.
 
 usbdescbldr_status_t
-usbdescbldr_add_children(usbdescbldr_ctx_t *      ctx,
-                          usbdescbldr_item_t *         parent,
-                          ...)
+usbdescbldr_add_children(usbdescbldr_ctx_t *    ctx,
+                         usbdescbldr_item_t *   parent,
+                         ...) // Item pointers, then NULL
 {
+  va_list              va, va_count;
+  usbdescbldr_item_t * ip;
+  uint32_t             n;
+  uint16_t             p16, s16;    // temps for Parent, Subordinate
+
+  if(parent == NULL)
+    return USBDESCBLDR_INVALID;
+
   // Everything should include itself.
-  if(parent->totalSize == 0)
-    parent->totalSize = parent->size;
+  p16 = parent->size;
+  if(parent->totalSize != NULL) {
+    memcpy(&p16, parent->totalSize, sizeof(p16));
+    p16 = ctx->fLittleShortToHost(p16);
+  }
+  if(p16 == 0)
+    p16 = parent->size;
 
-  // walk over arglist
-  // add subnode totalsize to totalsize
-  // end-loop
-  // then lots of smarts COULD be added about propagating values up and down
-  // eg adding a string to an interface could set the iInterface value in the interface..
+  va_start(va, parent);
+  va_copy(va_count, va);
 
-  return USBDESCBLDR_UNINITIALIZED;
+  // Count the new subordinates
+  for(n = 0; (ip = va_arg(va_count, usbdescbldr_item_t *)) != NULL; n++)
+    ;
+  va_end(va_count);
+
+  if(parent->items + n > USBDESCBLDR_MAX_CHILDREN) {
+    va_end(va);
+    return USBDESCBLDR_TOO_MANY;
+  }
+
+  for(; n > 0; n--) {
+    ip = va_arg(va, usbdescbldr_item_t *);
+    // (Repeating myself:) Everything should include itself.
+    // This time, it's mostly just a little convenience for the API-level code (below).
+    s16 = ip->size;
+    if(ip->totalSize != NULL) {
+      memcpy(&s16, ip->totalSize, sizeof(s16));
+      s16 = ctx->fLittleShortToHost(s16);
+    }
+    if(s16 == 0) s16 = ip->size;
+    p16 += s16;
+
+    // Just in case for future: maintain the hierarchy
+    parent->item[parent->items++] = ip;
+  }
+  va_end(va);
+
+  // Save the result back into the descriptor
+  if(parent->totalSize != NULL) {
+    p16 = ctx->fHostToLittleShort(p16);
+    memcpy(parent->totalSize, &p16, sizeof(*parent->totalSize));
+  }
+
+  return USBDESCBLDR_OK;
 }
 
 // //////////////////////////////////////////////////////////////////
@@ -144,17 +181,17 @@ typedef struct {
   uint8_t bDescriptorSubtype;
 } usbdescbldr_iterator_t;
 
-static void
+void
 usbdescbldr_iterator(usbdescbldr_ctx_t *ctx, uint8_t bDescriptorType, uint8_t bDescriptorSubtype, usbdescbldr_iterator_t *iter)
 {
   iter->ctx = ctx;
   iter->at = ctx->buffer;
   iter->bDescriptorType = bDescriptorType;
-  iter->bDescriptorSubtype = iter->bDescriptorSubtype;
+  iter->bDescriptorSubtype = bDescriptorSubtype;
 }
 
 
-static unsigned char *
+unsigned char *
 usbdescbldr_iterator_next(usbdescbldr_iterator_t *iter)
 {
   USB_DESCRIPTOR_HEADER * hdr = (USB_DESCRIPTOR_HEADER *) iter->at;
@@ -436,7 +473,8 @@ usbdescbldr_device_configuration_short_form_t * form)
     dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_CONFIGURATION;
 
     dest->bNumInterfaces = form->bNumInterfaces;        // XXX: this could be derived at build-time from the descendants
-    dest->iConfiguration = form->iConfiguration; // XXX: make up my mind. accept from caller or generate dynamically
+    dest->bConfigurationValue = form->bConfigurationValue;
+    dest->iConfiguration = form->iConfiguration;
     dest->bmAttributes = form->bmAttributes;
     dest->MaxPower = form->bMaxPower;
   } // filling in buffer
@@ -445,6 +483,7 @@ usbdescbldr_device_configuration_short_form_t * form)
   _item_init(item);
   item->size = sizeof(*dest);
   item->address = ctx->append;
+  item->totalSize = &dest->wTotalLength;
 
   // Consume buffer
   ctx->append += sizeof(*dest);
@@ -588,7 +627,7 @@ usbdescbldr_make_string_descriptor(usbdescbldr_ctx_t *ctx,
     // In Strings, the string unichars immediately follow the header
     drop = ((unsigned char *) dest) + sizeof(USB_DESCRIPTOR_HEADER);
     for(ascii = string; *ascii; ++ascii) {		// (Do not copy the NULL)
-      wchar = (uint16_t) ascii;			    // (zero-extending, very explicitly)
+      wchar = (uint16_t) *ascii;			    // (zero-extending, very explicitly)
       wchar = ctx->fHostToLittleShort(wchar);
       memcpy(drop, & wchar, sizeof(wchar));
       drop += sizeof(wchar);
@@ -737,6 +776,7 @@ usbdescbldr_make_standard_interface_descriptor(usbdescbldr_ctx_t * ctx,
 
     dest->bInterfaceNumber = form->bInterfaceNumber;
     dest->bAlternateSetting = form->bAlternateSetting;
+    dest->bNumEndpoints = form->bNumEndpoints;
     dest->bInterfaceClass = form->bInterfaceClass;
     dest->bInterfaceSubClass   = form->bInterfaceSubClass;
     dest->bInterfaceProtocol = form->bInterfaceProtocol;
@@ -785,7 +825,7 @@ usbdescbldr_make_endpoint_descriptor(usbdescbldr_ctx_t * ctx,
     memset(dest, 0, needs);
 
     dest->bLength = needs;
-    dest->bDescriptorType = USB_DESCRIPTOR_TYPE_INTERFACE;
+    dest->bDescriptorType = USB_DESCRIPTOR_TYPE_ENDPOINT;
 
     dest->bEndpointAddress = form->bEndpointAddress;
     dest->bmAttributes = form->bmAttributes;
@@ -969,15 +1009,15 @@ unsigned int dwClockFrequency,
     dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_VC_CS_INTERFACE;
     dest->header.bDescriptorSubtype = USB_INTERFACE_SUBTYPE_VC_HEADER;
 
-    tShort = ctx->fHostToLittleShort(0x0150);               // This is: UVC Class definition 1.5
+    tShort = ctx->fHostToLittleShort(UVC_CLASS);
     memcpy(&dest->bcdUVC, &tShort, sizeof(dest->bcdUVC));
 
     tInt = ctx->fHostToLittleInt(dwClockFrequency);
     memcpy(&dest->dwClockFrequency, &tInt, sizeof(dest->dwClockFrequency));
+    dest->bInCollection = bInCollection;
 
-    // Tack on the bInCollection and interface(s)
+    // Tack on the interface(s)
     drop = (uint8_t *) (dest + 1);
-    *drop++ = bInCollection;
     for(; bInCollection > 0; bInCollection--)
       *drop++ = (uint8_t) va_arg(va, uint32_t);
   }
@@ -987,6 +1027,7 @@ unsigned int dwClockFrequency,
   _item_init(item);
   item->size = needs;
   item->address = ctx->append;
+  item->totalSize = &dest->wTotalLength;
 
   // Consume buffer space (or just count, in dry run mode)
   ctx->append += needs;
@@ -1114,7 +1155,8 @@ usbdescbldr_streaming_out_terminal_short_form_t * form)
 usbdescbldr_status_t
 usbdescbldr_make_vc_selector_unit(usbdescbldr_ctx_t * ctx,
 usbdescbldr_item_t * item,
-unsigned int bUnitID,
+uint8_t iSelector, // string index
+uint8_t bUnitID,
 ... // Terminated List of Input (Source) Pin(s)
 )
 {
@@ -1136,7 +1178,7 @@ unsigned int bUnitID,
     ;
   va_end(va_count);
 
-  needs = sizeof(*dest) + sizeof(uint8_t) * bNrInPins;
+  needs = sizeof(*dest) + sizeof(uint8_t) * bNrInPins + sizeof(iSelector);
   if(needs > 0xff) {
     va_end(va);
     return USBDESCBLDR_OVERSIZED;  // .. as opposed to NO SPACE ..
@@ -1163,6 +1205,9 @@ unsigned int bUnitID,
     *drop++ = bNrInPins;
     for(; bNrInPins > 0; bNrInPins--)
       *drop++ = (uint8_t) va_arg(va, uint32_t);
+
+    // .. and the iSelector (string).
+    *drop = iSelector;
   }
   va_end(va);
 
@@ -1299,10 +1344,8 @@ usbdescbldr_vc_extension_unit_short_form_t * form,
     dest->bNumControls = form->bNumControls;
     dest->bNrInPins = bNrInPins;
 
-    drop = (uint8_t *) (dest + 1);
-
     // Tack on the sources(s): baSourceID
-    *drop++ = bNrInPins;
+    drop = (uint8_t *) (dest + 1);
     for(; bNrInPins > 0; bNrInPins--)
       *drop++ = (uint8_t) va_arg(va, uint32_t);
 
@@ -1443,6 +1486,7 @@ usbdescbldr_vs_if_input_header_short_form_t * form,
   _item_init(item);
   item->size = needs;
   item->address = ctx->append;
+  item->totalSize = &dest->wTotalLength;
 
   // Consume buffer space (or just count, in dry run mode)
   ctx->append += needs;
