@@ -278,7 +278,7 @@ usbdescbldr_init(usbdescbldr_ctx_t *  ctx,
 // Collections, interfaces, etc left open will be tidied up
 // (if possible..?)
 usbdescbldr_status_t
-usbdescbldr_close(void)
+usbdescbldr_close(usbdescbldr_ctx_t *  ctx)
 {
   return USBDESCBLDR_OK;
 }
@@ -288,7 +288,7 @@ usbdescbldr_close(void)
 // Once this is complete, the API requires an _init() before
 // anything will perform again.
 usbdescbldr_status_t
-usbdescbldr_end(void)
+usbdescbldr_end(usbdescbldr_ctx_t *  ctx)
 {
   return USBDESCBLDR_OK;
 }
@@ -595,7 +595,7 @@ usbdescbldr_status_t
 usbdescbldr_make_string_descriptor(usbdescbldr_ctx_t *ctx,
                                    usbdescbldr_item_t *item, // OUT
                                    uint8_t *index, // OUT
-                                   char *string) // OUT
+                                   const char *string) // IN
 {
   USB_STRING_DESCRIPTOR *dest;
   size_t needs;
@@ -941,7 +941,7 @@ usbdescbldr_make_interface_association_descriptor(usbdescbldr_ctx_t * ctx,
 
 
 usbdescbldr_status_t
-usbdescbldr_make_video_control_interface_descriptor(usbdescbldr_ctx_t * ctx,
+usbdescbldr_make_vc_interface_descriptor(usbdescbldr_ctx_t * ctx,
 usbdescbldr_item_t * item,
 usbdescbldr_standard_interface_short_form_t * form)
 {
@@ -956,13 +956,29 @@ usbdescbldr_standard_interface_short_form_t * form)
 
 
 
+usbdescbldr_status_t
+usbdescbldr_make_vs_interface_descriptor(usbdescbldr_ctx_t * ctx,
+usbdescbldr_item_t * item,
+usbdescbldr_standard_interface_short_form_t * form)
+{
+  // really, this is only stubbed out in case we'd like to free the 
+  // caller from specifying the class/subclass/protocol.
+  form->bInterfaceClass = USB_INTERFACE_CC_VIDEO;
+  form->bInterfaceSubClass = USB_INTERFACE_VC_SC_VIDEOSTREAMING;
+  form->bInterfaceProtocol = USB_INTERFACE_VC_PC_PROTOCOL_15;
+
+  return usbdescbldr_make_standard_interface_descriptor(ctx, item, form);
+}
+
+
+
 // The VC CS Interface Header Descriptor. It is treated as a header for 
 // numerous items that will follow it once built. The header itself has
 // a variable number of interfaces at the end, which are given by their
 // interface numbers in a list, terminated with USBDESCBNLDR_END_LIST .
 
 usbdescbldr_status_t
-usbdescbldr_make_vc_cs_interface_descriptor(usbdescbldr_ctx_t * ctx,
+usbdescbldr_make_vc_interface_header(usbdescbldr_ctx_t * ctx,
 usbdescbldr_item_t * item,
 unsigned int dwClockFrequency,
 ... // Terminated List of Interface Numbers 
@@ -1420,7 +1436,7 @@ uint16_t wMaxTransferSize)
 // UVC Video Stream Interface Input Header
 
 usbdescbldr_status_t
-usbdescbldr_make_uvc_vs_if_input_header(usbdescbldr_ctx_t * ctx,
+usbdescbldr_make_vs_interface_header(usbdescbldr_ctx_t * ctx,
 usbdescbldr_item_t * item,
 usbdescbldr_vs_if_input_header_short_form_t * form,
 ...) // Varying: bmaControls (which are passed as int32s), terminated by USBDESCBLDR_LIST_END

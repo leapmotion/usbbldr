@@ -18,38 +18,48 @@ extern "C" {
 
 int HelloWorld(void);
 
+// TODO
+// -- Dry run mode won't work right now; the wTotalSize pointers in the items
+// all point to descriptor fields in the buffer. Remedy will be to shadow the total
+// lengths within the items themselves.
+
   // //////////////////////////////////////////////////////////////////
   // //////////////////////////////////////////////////////////////////
   // API
+
+/// The API is based around a context which is used to collect and maintain
+/// state as the API is used. It is not opaque (e.g. void *) as the caller
+/// must provide one to the API; the API does not create structures dynamically.
+/// The context must be initialized before making any other use of the API.
+/// Callers should treat the context as 'read only'.
+
 typedef struct usbdescbldr_ctx_s {
   unsigned char 	initialized;	// Have we been initialized? 0: no.
 
   unsigned char *	buffer;		    // Start of user-provided buffer (if any)
-  size_t		      bufferSize;	  // Length in uint8_tas of any user-provided buffer
+  size_t		      bufferSize;	  // Length in bytes of any user-provided buffer
   unsigned char * append;		    // Address in buffer for next addition (append)
-  unsigned char *	last_append;	// Start address of last completed 'level' (see stack)
 
   unsigned int  	i_string;	    // Next string index to be assigned
   unsigned int    i_devConfig;  // Next device configuration index to be assigned
 
+  // Conversion functions for little-endian support across platforms.
   uint16_t(*fLittleShortToHost)(uint16_t s);
   uint16_t(*fHostToLittleShort)(uint16_t s);
   unsigned int(*fLittleIntToHost)(unsigned int s);
   unsigned int(*fHostToLittleInt)(unsigned int s);
-
-  // ...
 } usbdescbldr_ctx_t;
 
+/// Errors returned by the API.
   typedef enum {
     USBDESCBLDR_OK,
-    USBDESCBLDR_UNINITIALIZED,		// Never initialized
-    USBDESCBLDR_UNSUPPORTED,		  // Never written...
-    USBDESCBLDR_DRY_RUN,		      // Not actually creating the datum
-    USBDESCBLDR_NO_SPACE,		      // Buffer exhausted
-    USBDESCBLDR_LEVEL_VIOLATION,	// Can't do that here
-    USBDESCBLDR_INVALID,		      // Null ptr, duplicate, range error..
-    USBDESCBLDR_OVERSIZED,        // Exceeds size limit
-    USBDESCBLDR_TOO_MANY,         // Exceeds instance count limit
+    USBDESCBLDR_UNINITIALIZED,		///< Never initialized
+    USBDESCBLDR_UNSUPPORTED,		  ///< Never written...
+    USBDESCBLDR_DRY_RUN,		      ///< Not actually creating the datum
+    USBDESCBLDR_NO_SPACE,		      ///< Buffer exhausted
+    USBDESCBLDR_INVALID,		      ///< Null ptr, duplicate, range error..
+    USBDESCBLDR_OVERSIZED,        ///< Exceeds size limit
+    USBDESCBLDR_TOO_MANY,         ///< Exceeds instance count limit
     // ...
   } usbdescbldr_status_t;
 
@@ -60,6 +70,11 @@ typedef struct usbdescbldr_ctx_s {
   // terminator. We choose a value which cannot be represented as
   // a uint8_t or uint16_t, isn't a legit pointer, and should be unlikely
   // as a DWORD (uint32_t) value in a descriptor.
+
+  // API memebers which accept a variable number of arguments
+  // typically will use this constant to terminate the list.
+  // API memebers which accept a variable number of pointers
+  // will use NULL to terminate their lists.
   static const uint32_t USBDESCBLDR_LIST_END = 0xee00eeef;
 
 
@@ -67,70 +82,74 @@ typedef struct usbdescbldr_ctx_s {
   // 'know' this structure only to provide them as return (out) parameters;
   // never should they modify the contents.
 #define USBDESCBLDR_MAX_CHILDREN 16
+
+  /// Items are filled in as results from all of the API maker
+  /// calls. They will be used after the make calls have been
+  // finished to layer the descriptors and build up the lengths
+  // of layered descriptors, and to access the binary results
+  // for each descriptor. Callers should trest items as 'read only'.
+
   typedef struct usbdescbldr_item_s {
-    void *                      address;        // Where it is stored
-    unsigned int                index;          // Index, interface number, endpoint number, anything of this nature
-    uint16_t                    size;           // Size of item itself
-    uint16_t *                  totalSize;      // Size of item and all children, or NULL if not kept
-    unsigned int                items;          // Number iof sub-items ('children')
+    void *                      address;        ///< Where it is stored
+    unsigned int                index;          ///< Index, interface number, endpoint number, anything of this nature
+    uint16_t                    size;           ///< Size of item itself
+    uint16_t *                  totalSize;      ///< Size of item and all children, or NULL if not kept
+    unsigned int                items;          ///< Number iof sub-items ('children')
     struct usbdescbldr_item_s * item[USBDESCBLDR_MAX_CHILDREN];
   } usbdescbldr_item_t;
 
  
   // Setup and teardown
 
-  // Reset internal state and begin a new descriptor.
-  // Passing NULL for the buffer indicates a 'dry run' --
-  // go through all the motions, checks, and size computations
-  // but do not actually create a descriptor.
-
+  /// Reset internal state and begin a new descriptor.
+  /// Passing NULL for the buffer indicates a 'dry run' --
+  /// go through all the motions, checks, and size computations
+  /// but do not actually create a descriptor.
+  ///\param [in] ctx A context to be initialized for the session.
+  ///\param [in] buffer An optional buffer for the session to use to actually assemble the results into final forms. If NULL is provided, the API 
+  /// will simply use the items to try and come up with a scaffolding of the final results, which may provide sanity checking and sizes.
+  ///\param [in] bufferSize The size in bytes of the buffer.
   usbdescbldr_status_t
-    usbdescbldr_init(usbdescbldr_ctx_t *  ctx,
-    unsigned char *      buffer,
-    size_t               bufferSize);
+  usbdescbldr_init(usbdescbldr_ctx_t *  ctx,
+                   unsigned char *      buffer,
+                   size_t               bufferSize);
 
 
   // Commit (complete/finish) the descriptor in progress.
   // Collections, interfaces, etc left open will be tidied up
   // (if possible..?)
   usbdescbldr_status_t
-  usbdescbldr_close(void);
-
-  // Size of descriptor 'so far'
-  usbdescbldr_status_t
-  usbdescbldr_descriptor_size(void);
-
-  // Address (within buffer) of the last completed level/item.
-  // Returns NULL when called in 'dry-run' mode.
-  usbdescbldr_status_t
-  usbdescbldr_last_address(unsigned char **base_address);
+    usbdescbldr_close(usbdescbldr_ctx_t * ctx);
 
   // Terminate use of the builder. Release any resources.
   // Once this is complete, the API requires an _init() before
   // anything will perform again.
   usbdescbldr_status_t
-  usbdescbldr_end(void);
+    usbdescbldr_end(usbdescbldr_ctx_t * ctx);
 
   // //////////////////////////////////////////////////////////////////
   // Constructions
 
   // Make a set of items subordinate to one parent item. This
-  // is used to both place the items contiguously, in order,
-  // in memory after the parent item and to allow the parent
-  // item to account for their accumulated lengths.
+  // is used to allow the parent item to account for their accumulated lengths.
   // Pass the context, a result item, and the subordinate items.
+  // Terminate the list with NULL.
 
   usbdescbldr_status_t
     usbdescbldr_add_children(usbdescbldr_ctx_t *  ctx,
     usbdescbldr_item_t * parent,
     ...);
 
+  // //////////////////////////////////////////////////////////////////
+
   // Create the language descriptor (actually string, index 0).
   // Pass the context, a result item, and the IDs.
   usbdescbldr_status_t
     usbdescbldr_make_languageIDs(usbdescbldr_ctx_t * ctx,
-                               usbdescbldr_item_t * item,
-                               ...);
+                                 usbdescbldr_item_t * item,
+                                 ...);
+
+  // //////////////////////////////////////////////////////////////////
 
   // Generate a USB Device Descriptor. This is one-shot and top-level.
   // Pass the context, a result item, and the completed Device Descriptor 
@@ -152,8 +171,8 @@ typedef struct usbdescbldr_ctx_s {
 
   usbdescbldr_status_t
     usbdescbldr_make_device_descriptor(usbdescbldr_ctx_t *ctx,
-                                     usbdescbldr_item_t *item,
-                                     usbdescbldr_device_descriptor_short_form_t *form);
+                                       usbdescbldr_item_t *item,
+                                       usbdescbldr_device_descriptor_short_form_t *form);
     
   // //////////////////////////////////////////////////////////////////
 
@@ -177,29 +196,30 @@ typedef struct usbdescbldr_ctx_s {
   // Define a new string and obtain its index. This is a one-shot top-level item.
   // Pass the string in ASCII and NULL-terminated (a classic C string).
   usbdescbldr_status_t
-    usbdescbldr_make_string_descriptor(usbdescbldr_ctx_t *ctx,
-                                    usbdescbldr_item_t *item,     // OUT
-                                    uint8_t *index,         // OUT
-                                    char *string);                // OUT
+    usbdescbldr_make_string_descriptor(usbdescbldr_ctx_t *  ctx,
+                                    usbdescbldr_item_t *    item,     // OUT
+                                    uint8_t *               index,    // OUT
+                                    const char *            string);  // IN
 
   // //////////////////////////////////////////////////////////////////
 
   // Generate a Binary Object Store. This is top-level.
   // Add the device Capabilities to it to complete the BOS.
   usbdescbldr_status_t 
-    usbdescbldr_make_bos_descriptor(usbdescbldr_ctx_t *       ctx,
-                                  usbdescbldr_item_t *          item);
+    usbdescbldr_make_bos_descriptor(usbdescbldr_ctx_t * ctx,
+                                  usbdescbldr_item_t *  item);
 
 
   // Generate a Device Capability descriptor.
   usbdescbldr_status_t
     usbdescbldr_make_device_capability_descriptor(usbdescbldr_ctx_t * ctx,
-                                                usbdescbldr_item_t *    item,
-                                                uint8_t	          bDevCapabilityType,
-                                                uint8_t *	        typeDependent,	// Anonymous uint8_ta data
-                                                size_t		              typeDependentSize);
+                                                usbdescbldr_item_t *  item,
+                                                uint8_t               bDevCapabilityType,
+                                                uint8_t *             typeDependent,	// Anonymous byte data
+                                                size_t                typeDependentSize);
 
  
+  // //////////////////////////////////////////////////////////////////
 
   // Generate a Device Configuration descriptor. 
   // Likewise, the short form takes the number of interfaces, but these too
@@ -220,10 +240,12 @@ typedef struct usbdescbldr_ctx_s {
 
   usbdescbldr_status_t
     usbdescbldr_make_device_configuration_descriptor(usbdescbldr_ctx_t * ctx,
-    usbdescbldr_item_t * item,
-    uint8_t * index,
-    usbdescbldr_device_configuration_short_form_t * form);
+                                                     usbdescbldr_item_t * item,
+                                                     uint8_t * index,
+                                                     usbdescbldr_device_configuration_short_form_t * form);
 
+
+  // //////////////////////////////////////////////////////////////////
 
   typedef struct {
     uint8_t bInterfaceNumber;
@@ -235,11 +257,27 @@ typedef struct usbdescbldr_ctx_s {
     uint8_t iInterface;
   } usbdescbldr_standard_interface_short_form_t;
 
+
   usbdescbldr_status_t
     usbdescbldr_make_standard_interface_descriptor(usbdescbldr_ctx_t * ctx,
-    usbdescbldr_item_t * item,
-    usbdescbldr_standard_interface_short_form_t * form);
+                                                   usbdescbldr_item_t * item,
+                                                   usbdescbldr_standard_interface_short_form_t * form);
 
+
+  usbdescbldr_status_t
+    usbdescbldr_make_vc_interface_descriptor(usbdescbldr_ctx_t * ctx,
+                                             usbdescbldr_item_t * item,
+                                             usbdescbldr_standard_interface_short_form_t * form);
+
+
+  usbdescbldr_status_t
+    usbdescbldr_make_vs_interface_descriptor(usbdescbldr_ctx_t * ctx,
+                                             usbdescbldr_item_t * item,
+                                             usbdescbldr_standard_interface_short_form_t * form);
+
+
+
+  // //////////////////////////////////////////////////////////////////
 
   typedef struct {
     uint8_t  bEndpointAddress;
@@ -251,10 +289,11 @@ typedef struct usbdescbldr_ctx_s {
 
   usbdescbldr_status_t
     usbdescbldr_make_endpoint_descriptor(usbdescbldr_ctx_t * ctx,
-    usbdescbldr_item_t * item,
-    usbdescbldr_endpoint_short_form_t * form);
+                                         usbdescbldr_item_t * item,
+                                         usbdescbldr_endpoint_short_form_t * form);
 
 
+  // //////////////////////////////////////////////////////////////////
 
   typedef struct {
     uint8_t  bMaxBurst;
@@ -264,10 +303,11 @@ typedef struct usbdescbldr_ctx_s {
 
   usbdescbldr_status_t
     usbdescbldr_make_ss_ep_companion_descriptor(usbdescbldr_ctx_t * ctx,
-    usbdescbldr_item_t * item,
-    usbdescbldr_ss_ep_companion_short_form_t * form);
+                                                usbdescbldr_item_t * item,
+                                                usbdescbldr_ss_ep_companion_short_form_t * form);
 
 
+  // //////////////////////////////////////////////////////////////////
 
   typedef struct {
     uint8_t bFirstInterface;
@@ -280,23 +320,20 @@ typedef struct usbdescbldr_ctx_s {
 
   usbdescbldr_status_t
     usbdescbldr_make_interface_association_descriptor(usbdescbldr_ctx_t * ctx,
-    usbdescbldr_item_t * item,
-    usbdescbldr_iad_short_form_t * form);
+                                                      usbdescbldr_item_t * item,
+                                                      usbdescbldr_iad_short_form_t * form);
 
-
-  usbdescbldr_status_t
-    usbdescbldr_make_video_control_interface_descriptor(usbdescbldr_ctx_t * ctx,
-    usbdescbldr_item_t * item,
-    usbdescbldr_standard_interface_short_form_t * form);
-
+  // //////////////////////////////////////////////////////////////////
 
   usbdescbldr_status_t
-    usbdescbldr_make_vc_cs_interface_descriptor(usbdescbldr_ctx_t * ctx,
-    usbdescbldr_item_t * item,
-    unsigned int dwClockFrequency,
-    ... // Terminated List of Interface Numbers 
-    );
+    usbdescbldr_make_vc_interface_header(usbdescbldr_ctx_t * ctx,
+                                         usbdescbldr_item_t * item,
+                                         unsigned int dwClockFrequency,
+                                         ...); // Terminated List of Interface Numbers 
+    
 
+
+  // //////////////////////////////////////////////////////////////////
 
   typedef struct {
     uint8_t  bTerminalID;
@@ -312,10 +349,11 @@ typedef struct usbdescbldr_ctx_s {
 
   usbdescbldr_status_t
     usbdescbldr_make_camera_terminal_descriptor(usbdescbldr_ctx_t * ctx,
-    usbdescbldr_item_t * item,
-    usbdescbldr_camera_terminal_short_form_t * form);
+                                                usbdescbldr_item_t * item,
+                                                usbdescbldr_camera_terminal_short_form_t * form);
 
  
+  // //////////////////////////////////////////////////////////////////
 
 
   typedef struct {
@@ -329,21 +367,22 @@ typedef struct usbdescbldr_ctx_s {
 
   usbdescbldr_status_t
     usbdescbldr_make_streaming_out_terminal_descriptor(usbdescbldr_ctx_t * ctx,
-    usbdescbldr_item_t * item,
-    usbdescbldr_streaming_out_terminal_short_form_t * form);
+                                                       usbdescbldr_item_t * item,
+                                                       usbdescbldr_streaming_out_terminal_short_form_t * form);
 
 
+  // //////////////////////////////////////////////////////////////////
 
 
   usbdescbldr_status_t
     usbdescbldr_make_vc_selector_unit(usbdescbldr_ctx_t * ctx,
-    usbdescbldr_item_t * item,
-    uint8_t iSelector, // string index
-    uint8_t bUnitID,
-    ... // Terminated List of Input (Source) Pin(s)
-    );
+                                      usbdescbldr_item_t * item,
+                                      uint8_t iSelector, // string index
+                                      uint8_t bUnitID,
+                                      ...); // Terminated List of Input (Source) Pin(s)
+   
 
-
+  // //////////////////////////////////////////////////////////////////
 
 
   typedef struct
@@ -358,10 +397,12 @@ typedef struct usbdescbldr_ctx_s {
 
   usbdescbldr_status_t
     usbdescbldr_make_vc_processor_unit(usbdescbldr_ctx_t * ctx,
-    usbdescbldr_item_t * item,
-    usbdescbldr_vc_processor_unit_short_form * form);
+                                       usbdescbldr_item_t * item,
+                                       usbdescbldr_vc_processor_unit_short_form * form);
 
   
+  // //////////////////////////////////////////////////////////////////
+
   typedef struct
   {
     uint8_t  bUnitID;
@@ -374,25 +415,22 @@ typedef struct usbdescbldr_ctx_s {
 
   usbdescbldr_status_t
     usbdescbldr_make_extension_unit_descriptor(usbdescbldr_ctx_t * ctx,
-    usbdescbldr_item_t * item,
-    usbdescbldr_vc_extension_unit_short_form_t * form,
-    ...); // Varying number of SourceIDs.
+                                               usbdescbldr_item_t * item,
+                                               usbdescbldr_vc_extension_unit_short_form_t * form,
+                                               ...); // Varying number of SourceIDs.
 
+
+  // //////////////////////////////////////////////////////////////////
 
   // UVC Class-Specific VC interrupt endpoint:
 
   usbdescbldr_status_t
     usbdescbldr_make_vc_interrupt_ep(usbdescbldr_ctx_t * ctx,
-    usbdescbldr_item_t * item,
-    uint16_t wMaxTransferSize);
+                                     usbdescbldr_item_t * item,
+                                     uint16_t wMaxTransferSize);
 
 
-
-  // The Standard VS Interface is 'standard' in that it is not
-  // class-specific. Use the standard interface maker, above.
-  // ...
-
-
+  // //////////////////////////////////////////////////////////////////
   // UVC Video Stream Interface Input Header
 
 
@@ -408,13 +446,14 @@ typedef struct usbdescbldr_ctx_s {
   } usbdescbldr_vs_if_input_header_short_form_t;
 
   usbdescbldr_status_t
-    usbdescbldr_make_uvc_vs_if_input_header(usbdescbldr_ctx_t * ctx,
-    usbdescbldr_item_t * item,
-    usbdescbldr_vs_if_input_header_short_form_t * form,
-    ...); // Varying: bmaControls (which are passed as int32s), terminated by USBDESCBLDR_LIST_END
+    usbdescbldr_make_vs_interface_header(usbdescbldr_ctx_t * ctx,
+                                         usbdescbldr_item_t * item,
+                                         usbdescbldr_vs_if_input_header_short_form_t * form,
+                                         ...); // Varying: bmaControls (which are passed as int32s), terminated by USBDESCBLDR_LIST_END
 
 
-    // UVC Video Stream Interface Output Header
+  // //////////////////////////////////////////////////////////////////
+  // UVC Video Stream Interface Output Header
 
     typedef struct
   {
@@ -429,17 +468,18 @@ typedef struct usbdescbldr_ctx_s {
 
     usbdescbldr_status_t
       usbdescbldr_make_uvc_vs_if_output_header(usbdescbldr_ctx_t * ctx,
-      usbdescbldr_item_t * item,
-      usbdescbldr_vs_if_output_header_short_form_t * form,
-      ...); // Varying: bmaControls (which are passed as int32s), terminated by USBDESCBLDR_LIST_END
+                                               usbdescbldr_item_t * item,
+                                               usbdescbldr_vs_if_output_header_short_form_t * form,
+                                               ...); // Varying: bmaControls (which are passed as int32s), terminated by USBDESCBLDR_LIST_END
 
 
+    // //////////////////////////////////////////////////////////////////
 
 
     typedef struct {
-      uint8_t   bFormatIndex;
-      uint8_t   bNumFrameDescriptors;
-      GUID      guidFormat;
+      uint8_t bFormatIndex;
+      uint8_t bNumFrameDescriptors;
+      GUID    guidFormat;
       uint8_t bBitsPerPixel;
       uint8_t bDefaultFrameIndex;
       uint8_t bAspectRatioX;
@@ -451,10 +491,11 @@ typedef struct usbdescbldr_ctx_s {
 
     usbdescbldr_status_t
       usbdescbldr_make_uvc_vs_format_frame(usbdescbldr_ctx_t * ctx,
-      usbdescbldr_item_t * item,
-      usbdescbldr_uvc_vs_format_frame_based_short_form_t * form);
+                                           usbdescbldr_item_t * item,
+                                           usbdescbldr_uvc_vs_format_frame_based_short_form_t * form);
 
 
+    // //////////////////////////////////////////////////////////////////
 
     typedef struct
     {
@@ -473,18 +514,19 @@ typedef struct usbdescbldr_ctx_s {
 
     usbdescbldr_status_t
       usbdescbldr_make_uvc_vs_frame_frame(usbdescbldr_ctx_t * ctx,
-      usbdescbldr_item_t * item,
-      usbdescbldr_uvc_vs_frame_frame_based_short_form_t * form,
-      ...);
+                                          usbdescbldr_item_t * item,
+                                          usbdescbldr_uvc_vs_frame_frame_based_short_form_t * form,
+                                          ...);
 
 
-
+    // //////////////////////////////////////////////////////////////////
+    // Streaming Format Descriptors
 
     typedef struct
     {
-      uint8_t   bFormatIndex;
-      uint8_t   bNumFrameDescriptors;
-      GUID      guidFormat;
+      uint8_t bFormatIndex;
+      uint8_t bNumFrameDescriptors;
+      GUID    guidFormat;
       uint8_t bBitsPerPixel;
       uint8_t bDefaultFrameIndex;
       uint8_t bAspectRatioX;
@@ -497,12 +539,12 @@ typedef struct usbdescbldr_ctx_s {
 
     usbdescbldr_status_t
       usbdescbldr_make_uvc_vs_format_uncompressed(usbdescbldr_ctx_t * ctx,
-      usbdescbldr_item_t * item,
-      usbdescbldr_uvc_vs_format_uncompressed_short_form_t * form);
+                                                  usbdescbldr_item_t * item,
+                                                  usbdescbldr_uvc_vs_format_uncompressed_short_form_t * form);
 
 
-
-    // Frame Descriptors
+    // //////////////////////////////////////////////////////////////////
+    // Streaming Frame Descriptors
 
     typedef struct
     {
@@ -520,13 +562,9 @@ typedef struct usbdescbldr_ctx_s {
 
     usbdescbldr_status_t
       usbdescbldr_make_uvc_vs_frame_uncompressed(usbdescbldr_ctx_t * ctx,
-      usbdescbldr_item_t * item,
-      usbdescbldr_uvc_vs_frame_uncompressed_short_form_t * form,
+                                                 usbdescbldr_item_t * item,
+                                                 usbdescbldr_uvc_vs_frame_uncompressed_short_form_t * form,
       ... /* interval data */);
-
-
-
-
 
 
 #ifdef __cplusplus
