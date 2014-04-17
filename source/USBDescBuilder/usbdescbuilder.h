@@ -557,7 +557,6 @@ typedef struct usbdescbldr_ctx_s {
       uint32_t dwMaxVideoFrameBufferSize;
       uint32_t dwDefaultFrameInterval;
       uint8_t bFrameIntervalType;
-      uint32_t dwBytesPerLine;
     } usbdescbldr_uvc_vs_frame_uncompressed_short_form_t;
 
     usbdescbldr_status_t

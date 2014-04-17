@@ -348,7 +348,6 @@ typedef struct _UVC_VS_FORMAT_UNCOMPRESSED_DESCRIPTOR
   uint8_t bAspectRatioY;
   uint8_t bmInterlaceFlags;
   uint8_t bCopyProtect;
-  uint8_t bVariableSize;
 } UVC_VS_FORMAT_UNCOMPRESSED_DESCRIPTOR;
 
 typedef struct _UVC_VS_FRAME_FRAME_DESCRIPTOR

@@ -357,6 +357,7 @@ createUSB30Configuration(void)
     { 1280, 120, 0x2E248000, 0x0004B000, 0x00007C02 }
   };
 
+  // Construct all seven frame formats.
   for(uint32_t f = 0; f < UNCOMPRESSED_FRAME_FORMATS; f++) {
     if(IS_OK(s)) {
       usbdescbldr_uvc_vs_frame_uncompressed_short_form_t sf;
@@ -381,7 +382,7 @@ createUSB30Configuration(void)
   if(IS_OK(s)) {
     usbdescbldr_endpoint_short_form_t sf;
     memset(&sf, 0, sizeof(sf));
-    sf.bEndpointAddress = 0x82;
+    sf.bEndpointAddress = 0x83;
     sf.bmAttributes = 0x02;
     sf.wMaxPacketSize = 1024;
     sf.bInterval = 0x01;
@@ -405,7 +406,7 @@ createUSB30Configuration(void)
 
   // Now, the buffer is laid out and populated. Establish the structure
   // (hierarchy) within the descriptors. This is done 'bottom-up' to
-  // allow proper percolation of values to higher and higher levels.
+  // allow proper percolation of lengths to higher and higher levels.
 
   // Streaming header envelops format descriptor
   if(IS_OK(s))
@@ -414,7 +415,7 @@ createUSB30Configuration(void)
     FLAG(s);
   }
 
-  // Streaming header envelops frame descriptor(s)
+  // Streaming header also envelops the frame descriptor(s)
   for(uint32_t f = 0; f < UNCOMPRESSED_FRAME_FORMATS; f++) {
     if(IS_OK(s))
       s = usbdescbldr_add_children(c, &it_vs_header, &it_vs_frm_uncomp[f], NULL);
@@ -424,11 +425,9 @@ createUSB30Configuration(void)
     }
   }
 
-  // Control header envelops control units, endpoint and SS companion, and specific interrupt EP
+  // Control header envelops control units
   if(IS_OK(s))
-    s = usbdescbldr_add_children(c, &it_vc_hdr, &it_vc_input,
-                                 &it_vc_pu, &it_vc_eu, &it_vc_output, &it_vc_ep, &it_vc_ss_companion,
-                                 &it_cs_ep_intr, NULL);
+    s = usbdescbldr_add_children(c, &it_vc_hdr, &it_vc_input, &it_vc_pu, &it_vc_eu, &it_vc_output, NULL);
   else {
     FLAG(s);
   }
@@ -440,9 +439,17 @@ createUSB30Configuration(void)
     FLAG(s);
   }
 
+  // Configuration also envelops endpoints
+  if(IS_OK(s))
+    s = usbdescbldr_add_children(c, &it_config, &it_cs_ep_intr, &it_vc_ep, &it_vc_ss_companion, &it_vs_ep, &it_vs_ss_companion, NULL);
+  else {
+    FLAG(s);
+  }
+ 
 
   // Emit the buffer contents.
   emit(c, "deviceDesc", &it_device);
+  emit(c, "deviceQualifier", &it_dev_qualifier);
   emit(c, "configurationDesc", &it_config);
 
   // Emit all strings

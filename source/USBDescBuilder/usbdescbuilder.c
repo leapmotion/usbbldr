@@ -1827,7 +1827,7 @@ usbdescbldr_uvc_vs_frame_uncompressed_short_form_t * form,
   }
 
   needs = sizeof(*dest);                        // Prefix of fixed-size fields
-  needs += sizeof(uint8_t) * intervalsParams;   // intervals
+  needs += sizeof(uint32_t) * intervalsParams;  // Add in the interval(s)
   if(needs > 0xff) {
     return USBDESCBLDR_OVERSIZED;  // .. as opposed to NO SPACE ..
   }
@@ -1843,7 +1843,7 @@ usbdescbldr_uvc_vs_frame_uncompressed_short_form_t * form,
 
     dest->header.bLength = needs;
     dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_VC_CS_INTERFACE;
-    dest->header.bDescriptorSubtype = USB_INTERFACE_SUBTYPE_VS_FRAME_FRAME_BASED;
+    dest->header.bDescriptorSubtype = USB_INTERFACE_SUBTYPE_VS_FRAME_UNCOMPRESSED;
 
     dest->bFrameIndex = form->bFrameIndex;
     dest->bmCapabilities = form->bmCapabilities;
@@ -1851,8 +1851,8 @@ usbdescbldr_uvc_vs_frame_uncompressed_short_form_t * form,
     t16 = ctx->fHostToLittleShort(form->wWidth);
     memcpy(&dest->wWidth, &t16, sizeof(dest->wWidth));
 
-    t16 = ctx->fHostToLittleShort(form->wWidth);
-    memcpy(&dest->wWidth, &t16, sizeof(dest->wWidth));
+    t16 = ctx->fHostToLittleShort(form->wHeight);
+    memcpy(&dest->wHeight, &t16, sizeof(dest->wHeight));
 
     t32 = ctx->fHostToLittleInt(form->dwMinBitRate);
     memcpy(&dest->dwMinBitRate, &t32, sizeof(dest->dwMinBitRate));
@@ -1865,9 +1865,6 @@ usbdescbldr_uvc_vs_frame_uncompressed_short_form_t * form,
 
     t32 = ctx->fHostToLittleInt(form->dwDefaultFrameInterval);
     memcpy(&dest->dwDefaultFrameInterval, &t32, sizeof(dest->dwDefaultFrameInterval));
-
-    t32 = ctx->fHostToLittleInt(form->dwBytesPerLine);
-    memcpy(&dest->dwMaxVideoFrameBufferSize, &t32, sizeof(dest->dwMaxVideoFrameBufferSize));
 
     dest->bFrameIntervalType = form->bFrameIntervalType;
 
