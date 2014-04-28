@@ -1,5 +1,6 @@
 #include "USBDescBuilderTest.h"
-#include "usbdescbuilder.h"
+#include "USBDescBuilder/USBBldr.h"
+#include "USBDescBuilder/usbdescbuilder.h"
 
 static const uint8_t  CAMERA_OUTPUT_TERMINAL = 0x02;
 static const uint8_t  STREAMING_OUTPUT_TERMINAL = 0x03;
@@ -462,16 +463,11 @@ createUSB30Configuration(void)
       fprintf(stderr, "String index is out of range (%u)\n", index);
     }
     else {
-      (void) sprintf(symbol, "stringDesc%03u", index);
+      (void) sprintf(symbol, "stringDesc%03u", index); // Emits a compiler warning (valid warning)
       emit(c, symbol, &it_string[si]);
     }
   }
 
 #undef IS_OK
 #undef FLAG
-}
-
-TEST_F(USBDescBuilderTest, HelloWorldTest) {
-  ASSERT_EQ(1, HelloWorld()) << "Hello world did not return 1!";
- createUSB30Configuration();
 }

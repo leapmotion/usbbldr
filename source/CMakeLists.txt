@@ -1,6 +1,7 @@
 include_directories(
   googletest
   googletest/include
+  .
 )
 
 # Enable the use of project directories on any platforms that support it
