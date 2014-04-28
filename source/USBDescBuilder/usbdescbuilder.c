@@ -297,21 +297,8 @@ usbdescbldr_end(usbdescbldr_ctx_t *  ctx)
 // Constructions
 
 
-/*! \fn usbdescbldr_status_t
-usbdescbldr_make_device_descriptor(usbdescbldr_ctx_t *ctx,
-                                   usbdescbldr_item_t *item,
-                                   usbdescbldr_device_descriptor_short_form_t *form)
-\brief Create the Device Descriptor.
+// Build a device descriptor based upon those values given in the short form by the
 
-Build a device descriptor based upon those values given in the short form by the
-caller.
-\param [in] ctx The Builder context.
-\param [in,out] A Builder item to describe the results.
-\param [in] form Those Device Descriptor values which must be specified by the caller.
-*/
-
-
-// Generate a USB Device Descriptor. This is one-shot and top-level.
 usbdescbldr_status_t
 usbdescbldr_make_device_descriptor(usbdescbldr_ctx_t *ctx,
                                    usbdescbldr_item_t *item,
@@ -378,7 +365,7 @@ usbdescbldr_make_device_descriptor(usbdescbldr_ctx_t *ctx,
 }
 
 
-// Generate a USB Device Qualifier Descriptor. This is one-shot and top-level.
+// Generate a USB Device Qualifier Descriptor.
 usbdescbldr_status_t
 usbdescbldr_make_device_qualifier_descriptor(usbdescbldr_ctx_t * ctx,
                                              usbdescbldr_item_t * item,
@@ -435,26 +422,15 @@ usbdescbldr_make_device_qualifier_descriptor(usbdescbldr_ctx_t * ctx,
 
 
 // Generate a Device Configuration descriptor. 
-// The string index for
-// the iConfiguration must be provided, but also the string (if any)
-// must be added as a child of the configuration.
-// Likewise, the short form takes the number of interfaces, but these too
-// must be added to the children.
-// The assigned configuration
-// index is returned -- this is probably presumed by other code,
-// and should probably be specified explicitly.. we'll see. Currently 
-// if that is the case, I assume the caller will perform an assert() 
-// or other sanity check on the returned value.
 
 usbdescbldr_status_t
 usbdescbldr_make_device_configuration_descriptor(usbdescbldr_ctx_t * ctx,
-usbdescbldr_item_t * item,
-uint8_t * index,
-usbdescbldr_device_configuration_short_form_t * form)
+                                                 usbdescbldr_item_t * item,
+                                                 usbdescbldr_device_configuration_short_form_t * form)
 {
   USB_CONFIGURATION_DESCRIPTOR *dest;
 
-  if(form == NULL || item == NULL || index == NULL)
+  if(form == NULL || item == NULL)
     return USBDESCBLDR_INVALID;
 
   // This item has a fixed length; check for 'fit'
@@ -472,7 +448,7 @@ usbdescbldr_device_configuration_short_form_t * form)
     dest->header.bLength = sizeof(*dest);
     dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_CONFIGURATION;
 
-    dest->bNumInterfaces = form->bNumInterfaces;        // XXX: this could be derived at build-time from the descendants
+    dest->bNumInterfaces = form->bNumInterfaces;
     dest->bConfigurationValue = form->bConfigurationValue;
     dest->iConfiguration = form->iConfiguration;
     dest->bmAttributes = form->bmAttributes;
@@ -493,21 +469,7 @@ usbdescbldr_device_configuration_short_form_t * form)
 
 
 // Create the language descriptor (actually string, index 0).
-// Pass the context, a result item, and the IDs.
 
-/*! \fn usbdescbldr_status_t
-usbdescbldr_make_languageIDs(usbdescbldr_ctx_t *ctx,
-                             usbdescbldr_item_t *item,
-                             ...)
-\brief Define the supported languages descriptor.
-
-The supported languages are actually stored in string descriptor #0.
-Hence, this must be performed before any other string descriptors are
-made.
-\param [in] ctx The Builder context.
-\param [in,out] The item resulting from this request.
-\param [in] ... The Language IDs (passed as ints). This list MUST be terminated with USBDESCBLDR_LIST_END.
-*/
 usbdescbldr_status_t
 usbdescbldr_make_languageIDs(usbdescbldr_ctx_t *ctx,
                              usbdescbldr_item_t *item,
@@ -585,12 +547,8 @@ usbdescbldr_make_languageIDs(usbdescbldr_ctx_t *ctx,
 
 
 
-// Define a new string and obtain its index. This is a one-shot top-level item.
-// Pass the string in ASCII and NULL-terminated (a classic C string). Returns
-// the expected string index in *index (optional; NULL if don't care).
+// Define a new string and obtain its index.
 
-// Define a new string and obtain its index. This is a one-shot top-level item.
-// Pass the string in ASCII and NULL-terminated (a classic C string).
 usbdescbldr_status_t 
 usbdescbldr_make_string_descriptor(usbdescbldr_ctx_t *ctx,
                                    usbdescbldr_item_t *item, // OUT
@@ -599,7 +557,8 @@ usbdescbldr_make_string_descriptor(usbdescbldr_ctx_t *ctx,
 {
   USB_STRING_DESCRIPTOR *dest;
   size_t needs;
-  unsigned char *drop, *ascii;
+  unsigned char *drop;
+  const char *ascii;
   uint16_t wchar;
 
   if(string == NULL || ctx == NULL || item == NULL)
@@ -627,7 +586,7 @@ usbdescbldr_make_string_descriptor(usbdescbldr_ctx_t *ctx,
     // In Strings, the string unichars immediately follow the header
     drop = ((unsigned char *) dest) + sizeof(USB_DESCRIPTOR_HEADER);
     for(ascii = string; *ascii; ++ascii) {		// (Do not copy the NULL)
-      wchar = (uint16_t) *ascii;			    // (zero-extending, very explicitly)
+      wchar = (uint16_t) *ascii;			        // (zero-extending, very explicitly)
       wchar = ctx->fHostToLittleShort(wchar);
       memcpy(drop, & wchar, sizeof(wchar));
       drop += sizeof(wchar);
@@ -652,18 +611,15 @@ usbdescbldr_make_string_descriptor(usbdescbldr_ctx_t *ctx,
 }
 
 
-// Generate a Binary Object Store. This is top-level.
-// Add the device Capabilities to it to complete the BOS.
 usbdescbldr_status_t
 usbdescbldr_make_bos_descriptor(usbdescbldr_ctx_t * ctx,
                                 usbdescbldr_item_t * item)
 {
   USB_BOS_DESCRIPTOR *dest;
+
   if(ctx == NULL || item == NULL)
     return USBDESCBLDR_INVALID;
   
-  // There can only be one of these -- add check
-
   // Check space
   if (ctx->buffer != NULL) {
     if (sizeof(*dest) > _bufferAvailable(ctx)) 
@@ -691,8 +647,7 @@ usbdescbldr_make_bos_descriptor(usbdescbldr_ctx_t * ctx,
 }
 
 
-// Generate a Device Capability descriptor.
-usbdescbldr_status_t
+
 usbdescbldr_make_device_capability_descriptor(usbdescbldr_ctx_t * ctx,
                                               usbdescbldr_item_t * item,
                                               uint8_t	          bDevCapabilityType,
@@ -743,6 +698,7 @@ usbdescbldr_make_device_capability_descriptor(usbdescbldr_ctx_t * ctx,
 
 
 // Generate a Standard Interface descriptor.
+
 usbdescbldr_status_t
 usbdescbldr_make_standard_interface_descriptor(usbdescbldr_ctx_t * ctx,
                                                 usbdescbldr_item_t * item,
@@ -753,10 +709,6 @@ usbdescbldr_make_standard_interface_descriptor(usbdescbldr_ctx_t * ctx,
 
   if(form == NULL || ctx == NULL || item == NULL)
     return USBDESCBLDR_INVALID;
-
-  // Config indicies are uint8_tas, limiting the number of them:
-  if(ctx->i_devConfig > 0xff)
-    return USBDESCBLDR_TOO_MANY;
 
   // This has a fixed length, so check up front
   needs = sizeof(*dest);
@@ -794,7 +746,7 @@ usbdescbldr_make_standard_interface_descriptor(usbdescbldr_ctx_t * ctx,
   return USBDESCBLDR_OK;
 }
 
-
+// Generate an Endpoint descriptor.
 usbdescbldr_status_t
 usbdescbldr_make_endpoint_descriptor(usbdescbldr_ctx_t * ctx,
                                      usbdescbldr_item_t * item,
@@ -806,10 +758,6 @@ usbdescbldr_make_endpoint_descriptor(usbdescbldr_ctx_t * ctx,
 
   if(form == NULL || ctx == NULL || item == NULL)
     return USBDESCBLDR_INVALID;
-
-  // Config indicies are uint8_tas, limiting the number of them:
-  if(ctx->i_devConfig > 0xff)
-    return USBDESCBLDR_TOO_MANY;
 
   // This has a fixed length, so check up front
   needs = sizeof(*dest);
@@ -846,11 +794,11 @@ usbdescbldr_make_endpoint_descriptor(usbdescbldr_ctx_t * ctx,
   return USBDESCBLDR_OK;
 }
 
-
+// Generate an Endpoint Companion descriptor for SuperSpeed operation.
 usbdescbldr_status_t
 usbdescbldr_make_ss_ep_companion_descriptor(usbdescbldr_ctx_t * ctx,
-usbdescbldr_item_t * item,
-usbdescbldr_ss_ep_companion_short_form_t * form)
+                                            usbdescbldr_item_t * item,
+                                            usbdescbldr_ss_ep_companion_short_form_t * form)
 {
   USB_SS_EP_COMPANION_DESCRIPTOR *dest;
   uint16_t tShort;
@@ -891,6 +839,8 @@ usbdescbldr_ss_ep_companion_short_form_t * form)
 
   return USBDESCBLDR_OK;
 }
+
+// Generate an Interface Association descriptor.
 
 usbdescbldr_status_t
 usbdescbldr_make_interface_association_descriptor(usbdescbldr_ctx_t * ctx,
@@ -942,32 +892,50 @@ usbdescbldr_make_interface_association_descriptor(usbdescbldr_ctx_t * ctx,
 
 usbdescbldr_status_t
 usbdescbldr_make_vc_interface_descriptor(usbdescbldr_ctx_t * ctx,
-usbdescbldr_item_t * item,
-usbdescbldr_standard_interface_short_form_t * form)
+                                         usbdescbldr_item_t * item,
+                                         usbdescbldr_vc_interface_short_form_t * form)
 {
-  // really, this is only stubbed out in case we'd like to free the 
-  // caller from specifying the class/subclass/protocol.
-  form->bInterfaceClass = USB_INTERFACE_CC_VIDEO;
-  form->bInterfaceSubClass = USB_INTERFACE_VC_SC_VIDEOCONTROL;
-  form->bInterfaceProtocol = USB_INTERFACE_VC_PC_PROTOCOL_15;
+  usbdescbldr_standard_interface_short_form_t iForm;
 
-  return usbdescbldr_make_standard_interface_descriptor(ctx, item, form);
+  if(ctx == NULL || item == NULL || form == NULL)
+    return USBDESCBLDR_INVALID;
+
+  iForm.bInterfaceNumber = form->bInterfaceNumber;
+  iForm.bAlternateSetting = form->bAlternateSetting;
+  iForm.bNumEndpoints = form->bNumEndpoints;
+  iForm.iInterface = form->iInterface;
+
+  // We can do the rest ourselves:
+  iForm.bInterfaceClass = USB_INTERFACE_CC_VIDEO;
+  iForm.bInterfaceSubClass = USB_INTERFACE_VC_SC_VIDEOCONTROL;
+  iForm.bInterfaceProtocol = USB_INTERFACE_VC_PC_PROTOCOL_15;
+
+  return usbdescbldr_make_standard_interface_descriptor(ctx, item, & iForm);
 }
 
 
 
 usbdescbldr_status_t
 usbdescbldr_make_vs_interface_descriptor(usbdescbldr_ctx_t * ctx,
-usbdescbldr_item_t * item,
-usbdescbldr_standard_interface_short_form_t * form)
+                                         usbdescbldr_item_t * item,
+usbdescbldr_vs_interface_short_form_t * form)
 {
-  // really, this is only stubbed out in case we'd like to free the 
-  // caller from specifying the class/subclass/protocol.
-  form->bInterfaceClass = USB_INTERFACE_CC_VIDEO;
-  form->bInterfaceSubClass = USB_INTERFACE_VC_SC_VIDEOSTREAMING;
-  form->bInterfaceProtocol = USB_INTERFACE_VC_PC_PROTOCOL_15;
+  usbdescbldr_standard_interface_short_form_t iForm;
 
-  return usbdescbldr_make_standard_interface_descriptor(ctx, item, form);
+  if(ctx == NULL || item == NULL || form == NULL)
+    return USBDESCBLDR_INVALID;
+
+  iForm.bInterfaceNumber = form->bInterfaceNumber;
+  iForm.bAlternateSetting = form->bAlternateSetting;
+  iForm.bNumEndpoints = form->bNumEndpoints;
+  iForm.iInterface = form->iInterface;
+
+  // We can do the rest ourselves:
+  iForm.bInterfaceClass = USB_INTERFACE_CC_VIDEO;
+  iForm.bInterfaceSubClass = USB_INTERFACE_VC_SC_VIDEOSTREAMING;
+  iForm.bInterfaceProtocol = USB_INTERFACE_VC_PC_PROTOCOL_15;
+
+  return usbdescbldr_make_standard_interface_descriptor(ctx, item, & iForm);
 }
 
 
@@ -975,7 +943,7 @@ usbdescbldr_standard_interface_short_form_t * form)
 // The VC CS Interface Header Descriptor. It is treated as a header for 
 // numerous items that will follow it once built. The header itself has
 // a variable number of interfaces at the end, which are given by their
-// interface numbers in a list, terminated with USBDESCBNLDR_END_LIST .
+// interface numbers in a list, terminated with USBDESCBLDR_END_LIST .
 
 usbdescbldr_status_t
 usbdescbldr_make_vc_interface_header(usbdescbldr_ctx_t * ctx,
@@ -1299,9 +1267,9 @@ usbdescbldr_vc_processor_unit_short_form * form)
 
 usbdescbldr_status_t
 usbdescbldr_make_extension_unit_descriptor(usbdescbldr_ctx_t * ctx,
-usbdescbldr_item_t * item,
-usbdescbldr_vc_extension_unit_short_form_t * form,
-...) // Varying number of SourceIDs.
+                                           usbdescbldr_item_t * item,
+                                           usbdescbldr_vc_extension_unit_short_form_t * form,
+                                           ...) // Varying number of SourceIDs.
 {
   USB_UVC_VC_EXTENSION_UNIT * dest;
   size_t needs;
@@ -1392,8 +1360,8 @@ usbdescbldr_vc_extension_unit_short_form_t * form,
 
 usbdescbldr_status_t
 usbdescbldr_make_vc_interrupt_ep(usbdescbldr_ctx_t * ctx,
-usbdescbldr_item_t * item,
-uint16_t wMaxTransferSize)
+                                 usbdescbldr_item_t * item,
+                                 uint16_t wMaxTransferSize)
 {
   USB_VC_CS_INTR_EP_DESCRIPTOR * dest;
   size_t needs;
@@ -1437,9 +1405,9 @@ uint16_t wMaxTransferSize)
 
 usbdescbldr_status_t
 usbdescbldr_make_vs_interface_header(usbdescbldr_ctx_t * ctx,
-usbdescbldr_item_t * item,
-usbdescbldr_vs_if_input_header_short_form_t * form,
-...) // Varying: bmaControls (which are passed as int32s), terminated by USBDESCBLDR_LIST_END
+                                     usbdescbldr_item_t * item,
+                                     usbdescbldr_vs_if_input_header_short_form_t * form,
+                                     ...) // Varying: bmaControls (which are passed as int32s), terminated by USBDESCBLDR_LIST_END
 {
   USB_UVC_VS_INPUT_HEADER_DESCRIPTOR * dest;
   size_t needs;
@@ -1515,9 +1483,9 @@ usbdescbldr_vs_if_input_header_short_form_t * form,
 
 usbdescbldr_status_t
 usbdescbldr_make_uvc_vs_if_output_header(usbdescbldr_ctx_t * ctx,
-usbdescbldr_item_t * item,
-usbdescbldr_vs_if_output_header_short_form_t * form,
-...) // Varying: bmaControls (which are passed as int32s), terminated by USBDESCBLDR_LIST_END
+                                         usbdescbldr_item_t * item,
+                                         usbdescbldr_vs_if_output_header_short_form_t * form,
+                                         ...) // Varying: bmaControls (which are passed as int32s), terminated by USBDESCBLDR_LIST_END
 {
   USB_UVC_VS_OUTPUT_HEADER_DESCRIPTOR * dest;
   size_t needs;
@@ -1586,14 +1554,12 @@ usbdescbldr_vs_if_output_header_short_form_t * form,
 
 
 // Payload Format Descriptors
-
-
 // UVC Video Stream Format (Frame Based)
 
 usbdescbldr_status_t
 usbdescbldr_make_uvc_vs_format_frame(usbdescbldr_ctx_t * ctx,
-usbdescbldr_item_t * item,
-usbdescbldr_uvc_vs_format_frame_based_short_form_t * form)
+                                     usbdescbldr_item_t * item,
+                                     usbdescbldr_uvc_vs_format_frame_based_short_form_t * form)
 {
   UVC_VS_FORMAT_FRAME_DESCRIPTOR * dest;
   size_t needs;
@@ -1649,8 +1615,8 @@ usbdescbldr_uvc_vs_format_frame_based_short_form_t * form)
 
 usbdescbldr_status_t
 usbdescbldr_make_uvc_vs_format_uncompressed(usbdescbldr_ctx_t * ctx,
-usbdescbldr_item_t * item,
-usbdescbldr_uvc_vs_format_uncompressed_short_form_t * form)
+                                            usbdescbldr_item_t * item,
+                                            usbdescbldr_uvc_vs_format_uncompressed_short_form_t * form)
 {
   UVC_VS_FORMAT_UNCOMPRESSED_DESCRIPTOR * dest;
   size_t needs;
@@ -1708,9 +1674,9 @@ usbdescbldr_uvc_vs_format_uncompressed_short_form_t * form)
 
 usbdescbldr_status_t
 usbdescbldr_make_uvc_vs_frame_frame(usbdescbldr_ctx_t * ctx,
-usbdescbldr_item_t * item,
-usbdescbldr_uvc_vs_frame_frame_based_short_form_t * form,
-... /* interval data */)
+                                    usbdescbldr_item_t * item,
+                                    usbdescbldr_uvc_vs_frame_frame_based_short_form_t * form,
+                                    ... /* interval data */)
 {
   UVC_VS_FRAME_FRAME_DESCRIPTOR * dest;
   size_t needs;
@@ -1800,9 +1766,9 @@ usbdescbldr_uvc_vs_frame_frame_based_short_form_t * form,
 
 usbdescbldr_status_t
 usbdescbldr_make_uvc_vs_frame_uncompressed(usbdescbldr_ctx_t * ctx,
-usbdescbldr_item_t * item,
-usbdescbldr_uvc_vs_frame_uncompressed_short_form_t * form,
-... /* interval data */)
+                                           usbdescbldr_item_t * item,
+                                           usbdescbldr_uvc_vs_frame_uncompressed_short_form_t * form,
+                                           ... /* interval data */)
 {
   UVC_VS_FRAME_UNCOMPRESSED_DESCRIPTOR * dest;
   size_t needs;

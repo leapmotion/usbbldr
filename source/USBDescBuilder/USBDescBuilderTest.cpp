@@ -6,7 +6,7 @@ static const uint8_t  STREAMING_OUTPUT_TERMINAL = 0x03;
 static const uint8_t  VIDEO_PU_UNIT = 0x05;
 static const uint8_t  VC_EXTENSION_UNIT = 0x06;
 static const GUID     EXTENSION_GUID = {  0x8E9093EF, 0x97EA, 0x49E1, { 0x83, 0x06, 0x9F, 0x6B, 0x69, 0x6A, 0x1A, 0xEE } };
-static const GUID     VS_FORMAT_UNCOMPRESSED = { 0x32595559, 0x0000, 0x0010, { 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 } };
+static const GUID     VS_FORMAT_UNCOMPRESSED = { 0x32595559, 0x0000, 0x0010, { 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 } }; // yuy2
 
 static const uint32_t UNCOMPRESSED_FRAME_FORMATS = 7;
 
@@ -76,6 +76,7 @@ createUSB30Configuration(void)
 
     SI_COUNT          // Always final
   };
+
   // What they'll say (special case 0 is for Language Support):
   static const char *ascii_strings[] = {
     NULL,
@@ -90,9 +91,6 @@ createUSB30Configuration(void)
   // .. and where they are held:
   usbdescbldr_item_t  it_string[SI_COUNT];
   
-  uint8_t
-    i_config;             // Configuration value
-
   usbdescbldr_ctx_t context, *c;
 
   usbdescbldr_status_t  s;
@@ -105,13 +103,14 @@ createUSB30Configuration(void)
   // Pair some working space with the context.
   s = usbdescbldr_init(c, buffer, sizeof(buffer));
 
-  // LANGUAGES first - architected to be at index zero.
+  // Strings: LANGUAGES first - architected to be at index zero.
   if(IS_OK(s)) {
     s = usbdescbldr_make_languageIDs(c, &it_string[SI_LANGUAGES], 0x0409 /* EN */, USBDESCBLDR_LIST_END);
   } else {
     FLAG(s);
   }
 
+  // Now, create other strings:
   for(uint32_t si = SI_MANUFACTURER; si < SI_COUNT; si++) {
     if(IS_OK(s)) {
       s = usbdescbldr_make_string_descriptor(c, &it_string[si], NULL, ascii_strings[si]);
@@ -165,7 +164,7 @@ createUSB30Configuration(void)
     sf.iConfiguration = SI_CONFIG;
     sf.bmAttributes = 0x80;
     sf.bMaxPower = 100;
-    s = usbdescbldr_make_device_configuration_descriptor(c, &it_config, & i_config, &sf);
+    s = usbdescbldr_make_device_configuration_descriptor(c, &it_config, &sf);
   } else {
     FLAG(s);
   }
@@ -186,7 +185,7 @@ createUSB30Configuration(void)
 
   // Interface 0 (control)
   if(IS_OK(s)) {
-    usbdescbldr_standard_interface_short_form_t sf;
+    usbdescbldr_vc_interface_short_form_t sf;
     memset(&sf, 0, sizeof(sf));
     sf.bInterfaceNumber = 0;
     sf.bAlternateSetting = 0;
@@ -292,7 +291,7 @@ createUSB30Configuration(void)
 
   // Interface 1 (streaming)
   if(IS_OK(s)) {
-    usbdescbldr_standard_interface_short_form_t sf;
+    usbdescbldr_vs_interface_short_form_t sf;
     memset(&sf, 0, sizeof(sf));
     sf.bInterfaceNumber = 1;
     sf.bAlternateSetting = 0;
@@ -456,11 +455,14 @@ createUSB30Configuration(void)
   for(uint32_t si = SI_LANGUAGES; si < SI_COUNT; si++) {
     char symbol[sizeof("stringDesc000")];
     uint8_t index = it_string[si].index;
-    // XXX make accessor for '.index'
-    if(sprintf(symbol, "stringDesc%03u", index) > sizeof(symbol)) {
+    // XXX snprintf() vs. sprintf_s() .. not sure about platform portability.
+    // without snprintf(), the check against 255 and the use of ..000" (above) must suffice
+    // if(snprintf(symbol, sizeof(symbol), "stringDesc%03u", index) > sizeof(symbol)) {
+    if(index > 255) {
       fprintf(stderr, "String index is out of range (%u)\n", index);
     }
     else {
+      (void) sprintf(symbol, "stringDesc%03u", index);
       emit(c, symbol, &it_string[si]);
     }
   }
