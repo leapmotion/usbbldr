@@ -8,8 +8,6 @@
 */
 
 #include <string.h>
-#include "USB.h"
-#include "USBExtras.h"
 #include "usbdescbuilder.h"
 
 // Ongoing: this is a library. The API must be documented (fairly well)
@@ -220,11 +218,6 @@ usbdescbldr_iterator_next(usbdescbldr_iterator_t *iter)
 // //////////////////////////////////////////////////////////////////
 // //////////////////////////////////////////////////////////////////
 // API
-
-int HelloWorld(void) {
-  return 1;
-}
-
 
 
 // //////////////////////////////////////////////////////////////////

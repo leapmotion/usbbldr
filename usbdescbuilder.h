@@ -14,9 +14,8 @@ extern "C" {
 #endif
 
 #include <stdint.h>
-#include "USBExtras.h"
+#include "USBBldr.h"
 
-int HelloWorld(void);
 
 // TODO
 // -- Dry run mode won't work right now; the wTotalSize pointers in the items
