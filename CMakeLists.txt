@@ -1,4 +1,5 @@
 SET(USBDescBuilder_SRCS
+  USBBldr.h
   usbdescbuilder.h
   usbdescbuilder.c
 )
