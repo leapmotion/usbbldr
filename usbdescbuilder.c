@@ -1479,7 +1479,7 @@ usbdescbldr_make_uvc_vs_if_output_header(usbdescbldr_ctx_t * ctx,
 
     dest->header.bLength = needs;
     dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_VC_CS_INTERFACE;
-    dest->bDescriptorSubType = USB_INTERFACE_SUBTYPE_VS_INPUT_HEADER;
+    dest->bDescriptorSubType = USB_INTERFACE_SUBTYPE_VS_OUTPUT_HEADER;
 
     dest->bNumFormats = bNumFormats;
     dest->bEndpointAddress = form->bEndpointAddress;
