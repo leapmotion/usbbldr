@@ -13,8 +13,27 @@
 #define static_assert(cond,message) /* elide for now */
 #endif // __cplusplus
 
-
 #include <stdint.h>
+
+// Select the class of UVC desired: 1.0, 1.1, 1.5
+#define UVC_CLASS_SELECT 100
+#if     UVC_CLASS_SELECT == 150
+#define UVC_CLASS 0x0150    // 1.5, conveniently in BCD
+#elif   UVC_CLASS_SELECT == 110
+#define UVC_CLASS 0x0110    // 1.1, conveniently in BCD
+#else
+#define UVC_CLASS 0x0100    // 1.0, conveniently in BCD
+#endif
+
+// The following MUST mimic the exported, API-visible usbdescbldr_guid_t :
+typedef struct
+{
+	uint32_t dwData1;
+	uint16_t dwData2;
+	uint16_t dwData3;
+	uint8_t  dwData4[8];
+} USB_GUID;
+
 
 
 //! Class-specific USB descriptor types.
@@ -50,7 +69,7 @@ typedef enum _BMREQUEST_DIR
 //! bmRequest.Type
 typedef enum _BMREQUEST_TYPE
 {
-  //! Standard request. See \ref USB_REQUEST_ENUM
+  //! Standard request
   BMREQUEST_TYPE_STANDARD = 0,
 
   //! Class-specific request.
@@ -247,14 +266,6 @@ typedef struct _USB_SS_EP_COMPANION_DESCRIPTOR
   uint16_t wBytesPerInterval;
 } USB_SS_EP_COMPANION_DESCRIPTOR;
 
-typedef struct _GUID
-{
-  uint32_t dwData1;
-  uint16_t dwData2;
-  uint16_t dwData3;
-  uint8_t  dwData4[8];
-} GUID;
-
 typedef struct _USB_ENDPOINT_DESCRIPTOR
 {
   uint8_t  bLength;
@@ -271,9 +282,6 @@ typedef struct _USB_CLASS_SPECIFIC_INTERRUPT_ENDPOINT_DESCRIPTOR
   uint8_t  bDescriptorSubType;
   uint16_t wMaxTransferSize;
 } USB_CLASS_SPECIFIC_INTERRUPT_ENDPOINT_DESCRIPTOR;
-
-
-#define UVC_CLASS 0x0150    // 1.5, conveniently in BCD
 
 typedef struct _USB_UVC_VC_HEADER_DESCRIPTOR
 {
@@ -359,7 +367,9 @@ typedef struct _USB_UVC_VC_PROCESSING_UNIT
   uint8_t  bControlSize;
   uint8_t  bmControls[3];
   uint8_t  iProcessing;
+#if     UVC_CLASS_SELECT >= 110
   uint8_t   bmVideoStandards;
+#endif
 } USB_UVC_VC_PROCESSING_UNIT;
 
 // Extension unit
@@ -368,7 +378,7 @@ typedef struct _USB_UVC_VC_EXTENSION_UNIT
   USB_DESCRIPTOR_HEADER header;
   uint8_t  bDescriptorSubType;       //0x06
   uint8_t  bUnitID;
-  GUID     guidExtensionCode;
+  USB_GUID guidExtensionCode;
   uint8_t  bNumControls;
   uint8_t  bNrInPins;
   //uint8_t  baSourceID;      // Nothing from here on is at a fixed offset.
@@ -423,7 +433,7 @@ typedef struct _USB_UVC_VS_FORMAT_UNCOMPRESSED_DESCRIPTOR
   uint8_t  bDescriptorSubType;        //0x04
   uint8_t  bFrameIndex;
   uint8_t  bNumFrameDescriptors;
-  GUID     guidFormat;
+  USB_GUID guidFormat;
   uint8_t  bBitsPerPixel;
   uint8_t  bDefaultFrameIndex;
   uint8_t  bAspectRatioX;
@@ -462,9 +472,9 @@ typedef struct _USB_DEVICE_CAPABILITY_DESCRIPTOR {
 typedef struct _UVC_VS_FORMAT_FRAME_DESCRIPTOR
 {
   USB_CS_DESCRIPTOR_HEADER header;
-  uint8_t   bFormatIndex;
-  uint8_t   bNumFrameDescriptors;
-  GUID      guidFormat;
+  uint8_t bFormatIndex;
+  uint8_t bNumFrameDescriptors;
+  USB_GUID guidFormat;
   uint8_t bBitsPerPixel;
   uint8_t bDefaultFrameIndex;
   uint8_t bAspectRatioX;
@@ -477,9 +487,9 @@ typedef struct _UVC_VS_FORMAT_FRAME_DESCRIPTOR
 typedef struct _UVC_VS_FORMAT_UNCOMPRESSED_DESCRIPTOR
 {
   USB_CS_DESCRIPTOR_HEADER header;
-  uint8_t   bFormatIndex;
-  uint8_t   bNumFrameDescriptors;
-  GUID      guidFormat;
+  uint8_t bFormatIndex;
+  uint8_t bNumFrameDescriptors;
+  USB_GUID guidFormat;
   uint8_t bBitsPerPixel;
   uint8_t bDefaultFrameIndex;
   uint8_t bAspectRatioX;
@@ -491,15 +501,15 @@ typedef struct _UVC_VS_FORMAT_UNCOMPRESSED_DESCRIPTOR
 typedef struct _UVC_VS_FRAME_FRAME_DESCRIPTOR
 {
   USB_CS_DESCRIPTOR_HEADER header;
-  uint8_t   bFrameIndex;
-  uint8_t   bmCapabilities;
+  uint8_t bFrameIndex;
+  uint8_t  bmCapabilities;
   uint16_t wWidth;
   uint16_t wHeight;
   uint32_t dwMinBitRate;
   uint32_t dwMaxBitRate;
   uint32_t dwVideoFrameBufferSize;
   uint32_t dwDefaultFrameInterval;
-  uint8_t bFrameIntervalType;
+  uint8_t  bFrameIntervalType;
   uint32_t dwBytesPerLine;
 
   // .. varies depending on the value of bFrameIntervalType
