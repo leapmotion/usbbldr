@@ -14,7 +14,6 @@ extern "C" {
 #endif
 
 #include <stdint.h>
-#include "USBBldr.h"
 
 
 // TODO
@@ -98,7 +97,7 @@ typedef struct usbdescbldr_ctx_s {
     void *                      address;        ///< Where it is stored
     unsigned int                index;          ///< Index, interface number, endpoint number, anything of this nature
     uint16_t                    size;           ///< Size of item itself
-    uint16_t *                  totalSize;      ///< Size of item and all children, or NULL if not kept
+    uint8_t *                   totalSize;      ///< Unaligned uint16_t *; Size of item and all children, or NULL if not kept
     unsigned int                items;          ///< Number of sub-items ('children')
     struct usbdescbldr_item_s * item[USBDESCBLDR_MAX_CHILDREN];
   } usbdescbldr_item_t;
@@ -165,7 +164,7 @@ typedef struct usbdescbldr_ctx_s {
   //
   // Maker actions that require several inputs take a 'short form' structure,
   // essentially the values for the descriptor-to-be which the builder cannot
-  // immediately derive itslf (or which the caller probably wants to control).
+  // immediately derive itself (or which the caller probably wants to control).
   //
   // By and large, the short-form members are named directly and obviously
   // to clearly 'be' the USB specification values they provide, and are not
@@ -173,7 +172,7 @@ typedef struct usbdescbldr_ctx_s {
   //
   // Maker actions return an item containing the result. As a side-effect,
   // the buffer (if any) has been updated with the scaffold of the requested
-  // descriptor, complete excluding any layering which will be performed once all the
+  // descriptor, completely excluding any layering which will be performed once all the
   // subordinate descriptors are also available.
   //
   // For the time being, and perhaps for all time, the buffer contents are defined

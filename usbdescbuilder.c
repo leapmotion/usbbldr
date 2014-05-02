@@ -8,6 +8,9 @@
 */
 
 #include <string.h>
+#include <stdarg.h>
+
+#include "USBBldr.h"
 #include "usbdescbuilder.h"
 
 // Ongoing: this is a library. The API must be documented (fairly well)
@@ -16,6 +19,34 @@
 // //////////////////////////////////////////////////////////////////
 // //////////////////////////////////////////////////////////////////
 // Internals
+
+// On Cypress, I saw two cases in which memcpy() to the fields of the
+// descriptor being built wound up at the wrong offsets within the structure.
+// A full day of poking around with differing forms of packing and
+// structuring did not resolve this. Overriding whatever memcpy() I am
+// resolving against on Cypress immediately resolved the issue. Until this
+// can be proved out, I'm keeping a local memcpy(). This is
+// used only for 2,3, and 4-byte moves and so performance is
+// not really a concern.
+
+// For posterity: the failing cases were in
+//   usbdescbldr_make_vc_interface_header()
+//   usbdescbldr_make_vc_interrupt_ep()
+
+static void *
+udb_memcpy(void *dest, const void * src, size_t l)
+{
+	uint8_t *dp, *sp;
+
+	dp = (uint8_t *) dest;
+	sp = (uint8_t *) src;
+
+	while (l--)
+		*dp++ = *sp++;
+
+	return dest;
+}
+#define memcpy(d,s,l) udb_memcpy((d),(s),(l))
 
 
 static size_t
@@ -66,28 +97,6 @@ _endianIntSwap(unsigned int s)
               (((s >> 0) & 0xff) << 24));
 
     return result;
-}
-
-// //////////////////////////////////////////////////////////////////
-// Debugging
-// Who knows if we have stdio, etc in our platform context.. make this optional
-
-#define   USE_USBDESCBLDR_SYSLOG
-#ifdef    USE_USBDESCBLDR_SYSLOG
-#include <stdarg.h>
-#include <stdio.h>
-#endif // USE_USBDESCBLDR_SYSLOG
-
-static void
-_syslog(int severity, const char *format, ...)
-{
-#ifdef    USE_USBDESCBLDR_SYSLOG
-    va_list     va;
-
-    va_start(va, format);
-    vfprintf(stderr, format, va);
-    va_end(va);
-#endif // USE_USBDESCBLDR_SYSLOG
 }
 
 // //////////////////////////////////////////////////////////////////
@@ -160,60 +169,12 @@ usbdescbldr_add_children(usbdescbldr_ctx_t *    ctx,
   // Save the result back into the descriptor
   if(parent->totalSize != NULL) {
     p16 = ctx->fHostToLittleShort(p16);
-    memcpy(parent->totalSize, &p16, sizeof(*parent->totalSize));
+    memcpy(parent->totalSize, &p16, sizeof(p16));
   }
 
   return USBDESCBLDR_OK;
 }
 
-// //////////////////////////////////////////////////////////////////
-// Buffer search helpers
-// When generating the final results, these are used to walk through the
-// buffer. The buffer is not necessarily in the "right order", depending on
-// the sequence of calls issued by the caller.
-
-typedef struct {
-  usbdescbldr_ctx_t * ctx;
-  unsigned char * at;
-  uint8_t bDescriptorType;
-  uint8_t bDescriptorSubtype;
-} usbdescbldr_iterator_t;
-
-void
-usbdescbldr_iterator(usbdescbldr_ctx_t *ctx, uint8_t bDescriptorType, uint8_t bDescriptorSubtype, usbdescbldr_iterator_t *iter)
-{
-  iter->ctx = ctx;
-  iter->at = ctx->buffer;
-  iter->bDescriptorType = bDescriptorType;
-  iter->bDescriptorSubtype = bDescriptorSubtype;
-}
-
-
-unsigned char *
-usbdescbldr_iterator_next(usbdescbldr_iterator_t *iter)
-{
-  USB_DESCRIPTOR_HEADER * hdr = (USB_DESCRIPTOR_HEADER *) iter->at;
-  unsigned char * result = NULL;
-
-  while(result == NULL && iter->at < iter->ctx->append) {
-    switch(iter->bDescriptorType) {
-    default:
-      // For unambiguous DescriptorTypes, match easy:
-      if(hdr->bDescriptorType == iter->bDescriptorType) {
-        result = iter->at;
-      }
-
-      // Add subtype'd types here.. will need their descriptor types
-      // unless we presume the bDescriptorSubType always follows the type
-      // case .. :
-
-    } // switch (type)
-
-    iter->at += hdr->bLength;     // Always advance the cursor, for next time
-  }  // while (more buffer remains)
-
-  return result;
-}
 
 // //////////////////////////////////////////////////////////////////
 // //////////////////////////////////////////////////////////////////
@@ -421,7 +382,7 @@ usbdescbldr_make_device_configuration_descriptor(usbdescbldr_ctx_t * ctx,
                                                  usbdescbldr_item_t * item,
                                                  usbdescbldr_device_configuration_short_form_t * form)
 {
-  USB_CONFIGURATION_DESCRIPTOR *dest;
+  USB_CONFIGURATION_DESCRIPTOR *dest = NULL;
 
   if(form == NULL || item == NULL)
     return USBDESCBLDR_INVALID;
@@ -452,7 +413,7 @@ usbdescbldr_make_device_configuration_descriptor(usbdescbldr_ctx_t * ctx,
   _item_init(item);
   item->size = sizeof(*dest);
   item->address = ctx->append;
-  item->totalSize = &dest->wTotalLength;
+  item->totalSize = (uint8_t *) &dest->wTotalLength;
 
   // Consume buffer
   ctx->append += sizeof(*dest);
@@ -562,7 +523,7 @@ usbdescbldr_make_string_descriptor(usbdescbldr_ctx_t *ctx,
     return USBDESCBLDR_TOO_MANY;
     
   // This has a fixed length, so check up front
-  needs = strlen(string) * sizeof(wchar_t) + sizeof(*dest);
+  needs = strlen(string) * sizeof(wchar) + sizeof(*dest);
   if (needs > 0xff)
     return USBDESCBLDR_OVERSIZED;  // .. as opposed to NO SPACE ..
 
@@ -639,13 +600,12 @@ usbdescbldr_make_bos_descriptor(usbdescbldr_ctx_t * ctx,
   return USBDESCBLDR_OK;
 }
 
-
-
+usbdescbldr_status_t
 usbdescbldr_make_device_capability_descriptor(usbdescbldr_ctx_t * ctx,
                                               usbdescbldr_item_t * item,
-                                              uint8_t	          bDevCapabilityType,
-                                              uint8_t *	        typeDependent,	// Anonymous byte data
-                                              size_t		        typeDependentSize)
+                                              uint8_t	           bDevCapabilityType,
+                                              uint8_t *	           typeDependent,	// Anonymous byte data
+                                              size_t	           typeDependentSize)
 {
   USB_DEVICE_CAPABILITY_DESCRIPTOR *dest;
   size_t needs;
@@ -940,12 +900,12 @@ usbdescbldr_vs_interface_short_form_t * form)
 
 usbdescbldr_status_t
 usbdescbldr_make_vc_interface_header(usbdescbldr_ctx_t * ctx,
-usbdescbldr_item_t * item,
-unsigned int dwClockFrequency,
-... // Terminated List of Interface Numbers 
+                                     usbdescbldr_item_t * item,
+                                     unsigned int dwClockFrequency,
+                                     ... // Terminated List of Interface Numbers
 )
 {
-  USB_VC_CS_INTERFACE_DESCRIPTOR * dest;
+  USB_VC_CS_INTERFACE_DESCRIPTOR * dest = NULL;
   size_t needs;
   uint16_t tShort;
   uint32_t tInt;
@@ -1004,7 +964,7 @@ unsigned int dwClockFrequency,
   _item_init(item);
   item->size = needs;
   item->address = ctx->append;
-  item->totalSize = &dest->wTotalLength;
+  item->totalSize = (uint8_t *) &dest->wTotalLength;
 
   // Consume buffer space (or just count, in dry run mode)
   ctx->append += needs;
@@ -1020,7 +980,7 @@ usbdescbldr_make_camera_terminal_descriptor(usbdescbldr_ctx_t * ctx,
 usbdescbldr_item_t * item,
 usbdescbldr_camera_terminal_short_form_t * form)
 {
-  USB_UVC_CAMERA_TERMINAL *dest;
+  USB_UVC_CAMERA_TERMINAL *dest = NULL;
   size_t needs;
   uint32_t t32;
 
@@ -1131,10 +1091,10 @@ usbdescbldr_streaming_out_terminal_short_form_t * form)
 
 usbdescbldr_status_t
 usbdescbldr_make_vc_selector_unit(usbdescbldr_ctx_t * ctx,
-usbdescbldr_item_t * item,
-uint8_t iSelector, // string index
-uint8_t bUnitID,
-... // Terminated List of Input (Source) Pin(s)
+                                  usbdescbldr_item_t * item,
+                                  uint8_t iSelector, // string index
+                                  uint8_t bUnitID,
+                                  ... // Terminated List of Input (Source) Pin(s)
 )
 {
   USB_UVC_VC_SELECTOR_UNIT * dest;
@@ -1206,8 +1166,8 @@ uint8_t bUnitID,
 
 usbdescbldr_status_t
 usbdescbldr_make_vc_processor_unit(usbdescbldr_ctx_t * ctx,
-usbdescbldr_item_t * item,
-usbdescbldr_vc_processor_unit_short_form * form)
+                                   usbdescbldr_item_t * item,
+                                   usbdescbldr_vc_processor_unit_short_form * form)
 {
   USB_UVC_VC_PROCESSING_UNIT * dest;
   size_t needs;
@@ -1402,7 +1362,7 @@ usbdescbldr_make_vs_interface_header(usbdescbldr_ctx_t * ctx,
                                      usbdescbldr_vs_if_input_header_short_form_t * form,
                                      ...) // Varying: bmaControls (which are passed as int32s), terminated by USBDESCBLDR_LIST_END
 {
-  USB_UVC_VS_INPUT_HEADER_DESCRIPTOR * dest;
+  USB_UVC_VS_INPUT_HEADER_DESCRIPTOR * dest = NULL;
   size_t needs;
   uint8_t   bNumFormats;      // Number of formats (controls)
   uint8_t * drop;             // Place to drop next built member
@@ -1463,7 +1423,7 @@ usbdescbldr_make_vs_interface_header(usbdescbldr_ctx_t * ctx,
   _item_init(item);
   item->size = needs;
   item->address = ctx->append;
-  item->totalSize = &dest->wTotalLength;
+  item->totalSize = (uint8_t *) &dest->wTotalLength;
 
   // Consume buffer space (or just count, in dry run mode)
   ctx->append += needs;
