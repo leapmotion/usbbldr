@@ -39,8 +39,7 @@ emit(usbdescbldr_ctx_t *ctx, char *s, usbdescbldr_item_t *ip)
   printf("};\n");
 }
 
-static void
-createUSB30Configuration(void)
+TEST_F(USBDescBuilderTest, VerifySomethingIsOk)
 {
 #define IS_OK(s)  ((s) == USBDESCBLDR_OK)
 #define FLAG(s)   do { fprintf(stderr, "%s:%u: failure (%u)\n", __FILE__, __LINE__, (s)); } while (0)
@@ -122,7 +121,9 @@ createUSB30Configuration(void)
   }
   
   // Device Descriptor
-  if(IS_OK(s)) {
+  ASSERT_TRUE(IS_OK(s)) << "Something meaningful at this point";
+
+  {
     usbdescbldr_device_descriptor_short_form_t sf;
     memset(&sf, 0, sizeof(sf));
     sf.bDeviceClass = 0xef;         // Miscellaneous
@@ -137,8 +138,6 @@ createUSB30Configuration(void)
     sf.iProduct = SI_PRODUCT;
     sf.bNumConfigurations = 1;
     s = usbdescbldr_make_device_descriptor(c, &it_device, &sf);
-  } else {
-    FLAG(s);
   }
 
   // Device Qualifier
