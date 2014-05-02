@@ -567,7 +567,8 @@ usbdescbldr_make_string_descriptor(usbdescbldr_ctx_t *ctx,
 
 usbdescbldr_status_t
 usbdescbldr_make_bos_descriptor(usbdescbldr_ctx_t * ctx,
-                                usbdescbldr_item_t * item)
+                                usbdescbldr_item_t * item,
+                                const uint8_t		 capabilities)
 {
   USB_BOS_DESCRIPTOR *dest;
 
@@ -588,6 +589,7 @@ usbdescbldr_make_bos_descriptor(usbdescbldr_ctx_t * ctx,
     memset(dest, 0, sizeof(*dest));
     dest->header.bLength = sizeof(*dest);
     dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_BOS;
+    dest->bNumDeviceCaps = capabilities;
   }
 
   // Build the item 
@@ -603,9 +605,9 @@ usbdescbldr_make_bos_descriptor(usbdescbldr_ctx_t * ctx,
 usbdescbldr_status_t
 usbdescbldr_make_device_capability_descriptor(usbdescbldr_ctx_t * ctx,
                                               usbdescbldr_item_t * item,
-                                              uint8_t	           bDevCapabilityType,
-                                              uint8_t *	           typeDependent,	// Anonymous byte data
-                                              size_t	           typeDependentSize)
+                                              const uint8_t	       bDevCapabilityType,
+                                              const uint8_t *	   typeDependent,	// Anonymous byte data
+                                              const size_t	       typeDependentSize)
 {
   USB_DEVICE_CAPABILITY_DESCRIPTOR *dest;
   size_t needs;
@@ -861,7 +863,11 @@ usbdescbldr_make_vc_interface_descriptor(usbdescbldr_ctx_t * ctx,
   // We can do the rest ourselves:
   iForm.bInterfaceClass = USB_INTERFACE_CC_VIDEO;
   iForm.bInterfaceSubClass = USB_INTERFACE_VC_SC_VIDEOCONTROL;
+#if     UVC_CLASS_SELECT >= 150
   iForm.bInterfaceProtocol = USB_INTERFACE_VC_PC_PROTOCOL_15;
+#else
+  iForm.bInterfaceProtocol = USB_INTERFACE_VC_PC_PROTOCOL_UNDEFINED;
+#endif
 
   return usbdescbldr_make_standard_interface_descriptor(ctx, item, & iForm);
 }
@@ -886,7 +892,11 @@ usbdescbldr_vs_interface_short_form_t * form)
   // We can do the rest ourselves:
   iForm.bInterfaceClass = USB_INTERFACE_CC_VIDEO;
   iForm.bInterfaceSubClass = USB_INTERFACE_VC_SC_VIDEOSTREAMING;
+#if     UVC_CLASS_SELECT >= 150
   iForm.bInterfaceProtocol = USB_INTERFACE_VC_PC_PROTOCOL_15;
+#else
+  iForm.bInterfaceProtocol = USB_INTERFACE_VC_PC_PROTOCOL_UNDEFINED;
+#endif
 
   return usbdescbldr_make_standard_interface_descriptor(ctx, item, & iForm);
 }
@@ -1202,7 +1212,9 @@ usbdescbldr_make_vc_processor_unit(usbdescbldr_ctx_t * ctx,
     memcpy(&dest->bmControls, &t32, sizeof(dest->bmControls));
 
     dest->iProcessing = form->iProcessing;
+#if     UVC_CLASS_SELECT >= 110
     dest->bmVideoStandards = form->bmVideoStandards;
+#endif
   }
 
   // Build the item 
@@ -1229,7 +1241,7 @@ usbdescbldr_make_extension_unit_descriptor(usbdescbldr_ctx_t * ctx,
   uint8_t   bNrInPins;      // Number of inputs
   uint8_t * drop;
   va_list   va, va_count;
-  GUID      tGUID;
+  USB_GUID  tGUID;
 
   if(item == NULL)
     return USBDESCBLDR_INVALID;
@@ -1516,7 +1528,7 @@ usbdescbldr_make_uvc_vs_format_frame(usbdescbldr_ctx_t * ctx,
 {
   UVC_VS_FORMAT_FRAME_DESCRIPTOR * dest;
   size_t needs;
-  GUID     tGUID;
+  USB_GUID tGUID;
 
   if(ctx == NULL || form == NULL || item == NULL)
     return USBDESCBLDR_INVALID;
@@ -1573,7 +1585,7 @@ usbdescbldr_make_uvc_vs_format_uncompressed(usbdescbldr_ctx_t * ctx,
 {
   UVC_VS_FORMAT_UNCOMPRESSED_DESCRIPTOR * dest;
   size_t needs;
-  GUID     tGUID;
+  USB_GUID tGUID;
 
   if(ctx == NULL || form == NULL || item == NULL)
     return USBDESCBLDR_INVALID;

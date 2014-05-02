@@ -102,7 +102,16 @@ typedef struct usbdescbldr_ctx_s {
     struct usbdescbldr_item_s * item[USBDESCBLDR_MAX_CHILDREN];
   } usbdescbldr_item_t;
 
- 
+ // The standard GUID:
+  typedef struct usbdescbldr_guid_s
+  {
+    uint32_t dwData1;
+    uint16_t dwData2;
+    uint16_t dwData3;
+    uint8_t  dwData4[8];
+  } usbdescbldr_guid_t;
+
+
   // Setup and teardown
 
   /// Reset internal state and begin a new descriptor.
@@ -245,7 +254,7 @@ typedef struct usbdescbldr_ctx_s {
   ///\param [in] string The string to be stored in the descriptor.
   // Pass the string in ASCII and NULL-terminated (a classic C string).
   usbdescbldr_status_t
-    usbdescbldr_make_string_descriptor(usbdescbldr_ctx_t *  ctx,
+    usbdescbldr_make_string_descriptor(usbdescbldr_ctx_t *     ctx,
                                        usbdescbldr_item_t *    item,
                                        uint8_t *               index,    // OUT
                                        const char *            string);  // IN
@@ -256,23 +265,25 @@ typedef struct usbdescbldr_ctx_s {
   /// Once constructed, the caller can add Device Capabilities to a BOS to complete the BOS.
   ///\param [in] ctx The Builder context.
   ///\param [in,out] item The item to receive the results.
-  usbdescbldr_status_t 
-    usbdescbldr_make_bos_descriptor(usbdescbldr_ctx_t * ctx,
-                                  usbdescbldr_item_t *  item);
+  ///\param [in] capabilities The number of device capabilities to follow.
+ usbdescbldr_status_t
+    usbdescbldr_make_bos_descriptor(usbdescbldr_ctx_t *  ctx,
+                                    usbdescbldr_item_t * item,
+                                    const uint8_t		 capabilities);
 
 
   /// Generate a Device Capability descriptor.
   ///\param [in] ctx The Builder context.
   ///\param [in,out] item The item to receive the results.
-  ///\param [in] bDevCapabilityType The capability identifer for this device capability.
+  ///\param [in] bDevCapabilityType The capability identifier for this device capability.
   ///\param [in] typeDependent Anonymous, type-specific data to be represented by this descriptor.
   ///\param [in] typeDependentSize The sizes in bytes of the typeDependent data.
   usbdescbldr_status_t
     usbdescbldr_make_device_capability_descriptor(usbdescbldr_ctx_t *  ctx,
                                                   usbdescbldr_item_t * item,
-                                                  uint8_t              bDevCapabilityType,
-                                                  uint8_t *            typeDependent,	// Anonymous byte data
-                                                  size_t               typeDependentSize);
+                                                  const uint8_t        bDevCapabilityType,
+                                                  const uint8_t *      typeDependent,	// Anonymous byte data
+                                                  const size_t         typeDependentSize);
 
  
   // //////////////////////////////////////////////////////////////////
@@ -555,7 +566,7 @@ typedef struct usbdescbldr_ctx_s {
     uint16_t wMaxMultiplier;
     uint32_t controls;
     uint8_t  iProcessing;
-    uint8_t  bmVideoStandards;
+    uint8_t  bmVideoStandards;  // UVC 1.1 and above; otherwise, ignored.
   } usbdescbldr_vc_processor_unit_short_form;
 
   /// Generate a VC Processing Uint Descriptor.
@@ -578,7 +589,7 @@ typedef struct usbdescbldr_ctx_s {
   typedef struct
   {
     uint8_t   bUnitID;
-    GUID      guidExtensionCode;
+    usbdescbldr_guid_t guidExtensionCode;
     uint8_t   bNumControls;
     uint8_t   bControlSize;
     uint8_t * bmControls;
@@ -679,7 +690,7 @@ typedef struct usbdescbldr_ctx_s {
     typedef struct {
       uint8_t bFormatIndex;
       uint8_t bNumFrameDescriptors;
-      GUID    guidFormat;
+      usbdescbldr_guid_t guidFormat;
       uint8_t bBitsPerPixel;
       uint8_t bDefaultFrameIndex;
       uint8_t bAspectRatioX;
@@ -744,7 +755,7 @@ typedef struct usbdescbldr_ctx_s {
     {
       uint8_t bFormatIndex;
       uint8_t bNumFrameDescriptors;
-      GUID    guidFormat;
+      usbdescbldr_guid_t guidFormat;
       uint8_t bBitsPerPixel;
       uint8_t bDefaultFrameIndex;
       uint8_t bAspectRatioX;
