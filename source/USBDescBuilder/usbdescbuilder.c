@@ -596,6 +596,7 @@ usbdescbldr_make_bos_descriptor(usbdescbldr_ctx_t * ctx,
   _item_init(item);
   item->size = sizeof(*dest);
   item->address = ctx->append;
+  item->totalSize = (uint8_t *) & dest->wTotalLength;
 
   ctx->append += sizeof(*dest);
 
