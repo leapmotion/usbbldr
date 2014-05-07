@@ -1,11 +1,11 @@
 /* Copyright (c) 2014 LEAP Motion. All rights reserved.
-*
-* The intellectual and technical concepts contained herein are proprietary and
-* confidential to Leap Motion, and are protected by trade secret or copyright
-* law. Dissemination of this information or reproduction of this material is
-* strictly forbidden unless prior written permission is obtained from LEAP
-* Motion.
-*/
+ *
+ * The intellectual and technical concepts contained herein are proprietary and
+ * confidential to Leap Motion, and are protected by trade secret or copyright
+ * law. Dissemination of this information or reproduction of this material is
+ * strictly forbidden unless prior written permission is obtained from LEAP
+ * Motion.
+ */
 
 #pragma once
 
@@ -34,13 +34,13 @@ extern "C" {
 /// Callers should treat the context as 'read only'.
 
 typedef struct usbdescbldr_ctx_s {
-  unsigned char 	initialized;	// Have we been initialized? 0: no.
+  unsigned char   initialized;  // Have we been initialized? 0: no.
 
-  unsigned char *	buffer;		    // Start of user-provided buffer (if any)
-  size_t		      bufferSize;	  // Length in bytes of any user-provided buffer
-  unsigned char * append;		    // Address in buffer for next addition (append)
+  unsigned char * buffer;       // Start of user-provided buffer (if any)
+  size_t          bufferSize;   // Length in bytes of any user-provided buffer
+  unsigned char * append;       // Address in buffer for next addition (append)
 
-  unsigned int  	i_string;	    // Next string index to be assigned
+  unsigned int    i_string;     // Next string index to be assigned
 
   // Conversion functions for little-endian support across platforms.
   uint16_t(*fLittleShortToHost)(uint16_t s);
@@ -52,11 +52,11 @@ typedef struct usbdescbldr_ctx_s {
 /// Error values returned by the API.
   typedef enum {
     USBDESCBLDR_OK,               ///< Success
-    USBDESCBLDR_UNINITIALIZED,		///< Never initialized
-    USBDESCBLDR_UNSUPPORTED,		  ///< Never written...
-    USBDESCBLDR_DRY_RUN,		      ///< Not actually creating the datum
-    USBDESCBLDR_NO_SPACE,		      ///< Buffer exhausted
-    USBDESCBLDR_INVALID,		      ///< Null ptr, duplicate, range error..
+    USBDESCBLDR_UNINITIALIZED,    ///< Never initialized
+    USBDESCBLDR_UNSUPPORTED,      ///< Never written...
+    USBDESCBLDR_DRY_RUN,          ///< Not actually creating the datum
+    USBDESCBLDR_NO_SPACE,         ///< Buffer exhausted
+    USBDESCBLDR_INVALID,          ///< Null ptr, duplicate, range error..
     USBDESCBLDR_OVERSIZED,        ///< Exceeds size limit
     USBDESCBLDR_TOO_MANY,         ///< Exceeds instance count limit
     // ...
@@ -194,17 +194,17 @@ typedef struct usbdescbldr_ctx_s {
   /// The content of the short forms is intended to precisely mimic the descriptor each one
   /// creates. Please refer to the USB and UVC specifications for details on short form members.
    typedef struct {
-    uint16_t	bcdUSB;		        // USB Spec Version
-    uint8_t	  bDeviceClass;
-    uint8_t	  bDeviceSubClass;
-    uint8_t	  bDeviceProtocol;
-    uint16_t	idVendor;
-    uint16_t	idProduct;
-    uint16_t	bcdDevice;	      // BCD-encoded Release #
-    uint8_t	  iManufacturer;	  // String index
-    uint8_t	  iProduct;	        // String index
-    uint8_t	  iSerialNumber;	  // String Index
-    uint8_t	  bNumConfigurations;
+    uint16_t  bcdUSB;           // USB Spec Version
+    uint8_t   bDeviceClass;
+    uint8_t   bDeviceSubClass;
+    uint8_t   bDeviceProtocol;
+    uint16_t  idVendor;
+    uint16_t  idProduct;
+    uint16_t  bcdDevice;        // BCD-encoded Release #
+    uint8_t   iManufacturer;    // String index
+    uint8_t   iProduct;         // String index
+    uint8_t   iSerialNumber;    // String Index
+    uint8_t   bNumConfigurations;
   } usbdescbldr_device_descriptor_short_form_t;
 
    /// Build a device descriptor based upon those values given in the short form by the
@@ -224,12 +224,12 @@ typedef struct usbdescbldr_ctx_s {
   /// The content of the short forms is intended to precisely mimic the descriptor each one
   /// creates. Please refer to the USB and UVC specifications for details on short form members.
   typedef struct {
-    uint16_t	bcdUSB;		// USB Spec Version
-    uint8_t	bDeviceClass;
-    uint8_t	bDeviceSubClass;
-    uint8_t	bDeviceProtocol;
+    uint16_t  bcdUSB;   // USB Spec Version
+    uint8_t bDeviceClass;
+    uint8_t bDeviceSubClass;
+    uint8_t bDeviceProtocol;
     uint8_t bMaxPacketSize0;
-    uint8_t	bNumConfigurations;
+    uint8_t bNumConfigurations;
   } usbdescbldr_device_qualifier_short_form_t;
 
   // Generate a USB Device Qualifier Descriptor.
@@ -269,7 +269,7 @@ typedef struct usbdescbldr_ctx_s {
  usbdescbldr_status_t
     usbdescbldr_make_bos_descriptor(usbdescbldr_ctx_t *  ctx,
                                     usbdescbldr_item_t * item,
-                                    const uint8_t		 capabilities);
+                                    const uint8_t    capabilities);
 
 
   /// Generate a Device Capability descriptor.
@@ -282,7 +282,7 @@ typedef struct usbdescbldr_ctx_s {
     usbdescbldr_make_device_capability_descriptor(usbdescbldr_ctx_t *  ctx,
                                                   usbdescbldr_item_t * item,
                                                   const uint8_t        bDevCapabilityType,
-                                                  const uint8_t *      typeDependent,	// Anonymous byte data
+                                                  const uint8_t *      typeDependent, // Anonymous byte data
                                                   const size_t         typeDependentSize);
 
  

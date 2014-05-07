@@ -1,11 +1,11 @@
 /* Copyright (c) 2014 LEAP Motion. All rights reserved.
-*
-* The intellectual and technical concepts contained herein are proprietary and
-* confidential to Leap Motion, and are protected by trade secret or copyright
-* law. Dissemination of this information or reproduction of this material is
-* strictly forbidden unless prior written permission is obtained from LEAP
-* Motion.
-*/
+ *
+ * The intellectual and technical concepts contained herein are proprietary and
+ * confidential to Leap Motion, and are protected by trade secret or copyright
+ * law. Dissemination of this information or reproduction of this material is
+ * strictly forbidden unless prior written permission is obtained from LEAP
+ * Motion.
+ */
 
 #include <string.h>
 #include <stdarg.h>
@@ -36,15 +36,15 @@
 static void *
 udb_memcpy(void *dest, const void * src, size_t l)
 {
-	uint8_t *dp, *sp;
+  uint8_t *dp, *sp;
 
-	dp = (uint8_t *) dest;
-	sp = (uint8_t *) src;
+  dp = (uint8_t *) dest;
+  sp = (uint8_t *) src;
 
-	while (l--)
-		*dp++ = *sp++;
+  while (l--)
+    *dp++ = *sp++;
 
-	return dest;
+  return dest;
 }
 #define memcpy(d,s,l) udb_memcpy((d),(s),(l))
 
@@ -52,9 +52,9 @@ udb_memcpy(void *dest, const void * src, size_t l)
 static size_t
 _bufferAvailable(usbdescbldr_ctx_t *ctx)
 {
-    // Meaningless unless there's a buffer, so presume the caller
-    // has already verified that.
-    return ctx->bufferSize - (ctx->append - ctx->buffer);
+  // Meaningless unless there's a buffer, so presume the caller
+  // has already verified that.
+  return ctx->bufferSize - (ctx->append - ctx->buffer);
 }
 
 
@@ -63,40 +63,40 @@ _bufferAvailable(usbdescbldr_ctx_t *ctx)
 static uint16_t
 _endianShortNoOp(uint16_t s)
 {
-    return s;
+  return s;
 }
 
 
 static unsigned int
 _endianIntNoOp(unsigned int s)
 {
-    return s;
+  return s;
 }
 
 
 static uint16_t
 _endianShortSwap(uint16_t s)
 {
-    uint16_t result;
+  uint16_t result;
 
-    result = ((((s >> 8) & 0xff) << 0) |
-              (((s >> 0) & 0xff) << 8));
+  result = ((((s >> 8) & 0xff) << 0) |
+            (((s >> 0) & 0xff) << 8));
 
-    return result;
+  return result;
 }
 
 
 static unsigned int
 _endianIntSwap(unsigned int s)
 {
-    unsigned int result;
+  unsigned int result;
 
-    result = ((((s >> 24) & 0xff) << 0) |
-              (((s >> 16) & 0xff) << 8) |
-              (((s >> 8) & 0xff) << 16) |
-              (((s >> 0) & 0xff) << 24));
+  result = ((((s >> 24) & 0xff) << 0) |
+            (((s >> 16) & 0xff) << 8) |
+            (((s >> 8) & 0xff) << 16) |
+            (((s >> 0) & 0xff) << 24));
 
-    return result;
+  return result;
 }
 
 // //////////////////////////////////////////////////////////////////
@@ -105,7 +105,7 @@ _endianIntSwap(unsigned int s)
 static void 
 _item_init(usbdescbldr_item_t * item)
 {
-    memset(item, 0, sizeof(*item));
+  memset(item, 0, sizeof(*item));
 }
 
 
@@ -539,8 +539,8 @@ usbdescbldr_make_string_descriptor(usbdescbldr_ctx_t *ctx,
 
     // In Strings, the string unichars immediately follow the header
     drop = ((unsigned char *) dest) + sizeof(USB_DESCRIPTOR_HEADER);
-    for(ascii = string; *ascii; ++ascii) {		// (Do not copy the NULL)
-      wchar = (uint16_t) *ascii;			        // (zero-extending, very explicitly)
+    for(ascii = string; *ascii; ++ascii) {      // (Do not copy the NULL)
+      wchar = (uint16_t) *ascii;                // (zero-extending, very explicitly)
       wchar = ctx->fHostToLittleShort(wchar);
       memcpy(drop, & wchar, sizeof(wchar));
       drop += sizeof(wchar);
@@ -568,7 +568,7 @@ usbdescbldr_make_string_descriptor(usbdescbldr_ctx_t *ctx,
 usbdescbldr_status_t
 usbdescbldr_make_bos_descriptor(usbdescbldr_ctx_t * ctx,
                                 usbdescbldr_item_t * item,
-                                const uint8_t		 capabilities)
+                                const uint8_t            capabilities)
 {
   USB_BOS_DESCRIPTOR *dest;
 
@@ -604,11 +604,11 @@ usbdescbldr_make_bos_descriptor(usbdescbldr_ctx_t * ctx,
 }
 
 usbdescbldr_status_t
-usbdescbldr_make_device_capability_descriptor(usbdescbldr_ctx_t * ctx,
+usbdescbldr_make_device_capability_descriptor(usbdescbldr_ctx_t *  ctx,
                                               usbdescbldr_item_t * item,
-                                              const uint8_t	       bDevCapabilityType,
-                                              const uint8_t *	   typeDependent,	// Anonymous byte data
-                                              const size_t	       typeDependentSize)
+                                              const uint8_t        bDevCapabilityType,
+                                              const uint8_t *      typeDependent,       // Anonymous byte data
+                                              const size_t         typeDependentSize)
 {
   USB_DEVICE_CAPABILITY_DESCRIPTOR *dest;
   size_t needs;
@@ -657,8 +657,8 @@ usbdescbldr_make_device_capability_descriptor(usbdescbldr_ctx_t * ctx,
 
 usbdescbldr_status_t
 usbdescbldr_make_standard_interface_descriptor(usbdescbldr_ctx_t * ctx,
-                                                usbdescbldr_item_t * item,
-                                                usbdescbldr_standard_interface_short_form_t * form)
+					       usbdescbldr_item_t * item,
+					       usbdescbldr_standard_interface_short_form_t * form)
 {
   USB_INTERFACE_DESCRIPTOR *dest;
   size_t needs;
@@ -878,7 +878,7 @@ usbdescbldr_make_vc_interface_descriptor(usbdescbldr_ctx_t * ctx,
 usbdescbldr_status_t
 usbdescbldr_make_vs_interface_descriptor(usbdescbldr_ctx_t * ctx,
                                          usbdescbldr_item_t * item,
-usbdescbldr_vs_interface_short_form_t * form)
+					 usbdescbldr_vs_interface_short_form_t * form)
 {
   usbdescbldr_standard_interface_short_form_t iForm;
 
@@ -988,8 +988,8 @@ usbdescbldr_make_vc_interface_header(usbdescbldr_ctx_t * ctx,
 
 usbdescbldr_status_t
 usbdescbldr_make_camera_terminal_descriptor(usbdescbldr_ctx_t * ctx,
-usbdescbldr_item_t * item,
-usbdescbldr_camera_terminal_short_form_t * form)
+					    usbdescbldr_item_t * item,
+					    usbdescbldr_camera_terminal_short_form_t * form)
 {
   USB_UVC_CAMERA_TERMINAL *dest = NULL;
   size_t needs;
@@ -1051,8 +1051,8 @@ usbdescbldr_camera_terminal_short_form_t * form)
 
 usbdescbldr_status_t
 usbdescbldr_make_streaming_out_terminal_descriptor(usbdescbldr_ctx_t * ctx,
-usbdescbldr_item_t * item,
-usbdescbldr_streaming_out_terminal_short_form_t * form)
+						   usbdescbldr_item_t * item,
+						   usbdescbldr_streaming_out_terminal_short_form_t * form)
 {
   USB_UVC_STREAMING_OUT_TERMINAL *dest;
   size_t needs;
@@ -1238,7 +1238,7 @@ usbdescbldr_make_extension_unit_descriptor(usbdescbldr_ctx_t * ctx,
                                            ...) // Varying number of SourceIDs.
 {
   USB_UVC_VC_EXTENSION_UNIT * dest;
-  size_t needs;
+  size_t    needs;
   uint8_t   bNrInPins;      // Number of inputs
   uint8_t * drop;
   va_list   va, va_count;
@@ -1454,7 +1454,7 @@ usbdescbldr_make_uvc_vs_if_output_header(usbdescbldr_ctx_t * ctx,
                                          ...) // Varying: bmaControls (which are passed as int32s), terminated by USBDESCBLDR_LIST_END
 {
   USB_UVC_VS_OUTPUT_HEADER_DESCRIPTOR * dest;
-  size_t needs;
+  size_t    needs;
   uint8_t   bNumFormats;      // Number of formats (controls)
   uint8_t * drop;             // Place to drop next built member
 
@@ -1820,5 +1820,3 @@ usbdescbldr_make_uvc_vs_frame_uncompressed(usbdescbldr_ctx_t * ctx,
 
   return USBDESCBLDR_OK;
 }
-
-

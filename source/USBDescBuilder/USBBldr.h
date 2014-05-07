@@ -1,11 +1,11 @@
 /* Copyright (c) 2014 LEAP Motion. All rights reserved.
-*
-* The intellectual and technical concepts contained herein are proprietary and
-* confidential to Leap Motion, and are protected by trade secret or copyright
-* law. Dissemination of this information or reproduction of this material is
-* strictly forbidden unless prior written permission is obtained from LEAP
-* Motion.
-*/
+ *
+ * The intellectual and technical concepts contained herein are proprietary and
+ * confidential to Leap Motion, and are protected by trade secret or copyright
+ * law. Dissemination of this information or reproduction of this material is
+ * strictly forbidden unless prior written permission is obtained from LEAP
+ * Motion.
+ */
 
 #pragma once
 
@@ -28,10 +28,10 @@
 // The following MUST mimic the exported, API-visible usbdescbldr_guid_t :
 typedef struct
 {
-	uint32_t dwData1;
-	uint16_t dwData2;
-	uint16_t dwData3;
-	uint8_t  dwData4[8];
+  uint32_t dwData1;
+  uint16_t dwData2;
+  uint16_t dwData3;
+  uint8_t  dwData4[8];
 } USB_GUID;
 
 
@@ -605,7 +605,5 @@ static const uint8_t USB_VC_SUBTYPE_EP_UNDEFINED = 0x00;
 static const uint8_t USB_VC_SUBTYPE_EP_GENERAL = 0x01;
 static const uint8_t USB_VC_SUBTYPE_EP_ENDPOINT = 0x02;
 static const uint8_t USB_VC_SUBTYPE_EP_INTERRUPT = 0x03;
-
-// USB_UVC_ITT_CAMERA
 
 #pragma pack(pop)
