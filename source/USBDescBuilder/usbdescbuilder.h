@@ -162,7 +162,8 @@ typedef struct usbdescbldr_ctx_s {
   /// Pass the context, a result item, and the language IDs.
   ///\param [in] ctx The context for the session.
   ///\param [in] item The item to receive the result.
-  ///\param [in] ... The language specifiers to be included in the descriptor. Terminate this list with USBDESCBLDR_LIST_END .
+  ///\param [in] ... The language specifiers to be included in the descriptor. 
+  /// Terminate this list with USBDESCBLDR_LIST_END .
   usbdescbldr_status_t
     usbdescbldr_make_languageIDs(usbdescbldr_ctx_t * ctx,
                                  usbdescbldr_item_t * item,
@@ -216,7 +217,7 @@ typedef struct usbdescbldr_ctx_s {
   usbdescbldr_status_t
     usbdescbldr_make_device_descriptor(usbdescbldr_ctx_t *ctx,
                                        usbdescbldr_item_t *item,
-                                       usbdescbldr_device_descriptor_short_form_t *form);
+                                       const usbdescbldr_device_descriptor_short_form_t *form);
     
   // //////////////////////////////////////////////////////////////////
 
@@ -239,7 +240,7 @@ typedef struct usbdescbldr_ctx_s {
   usbdescbldr_status_t
     usbdescbldr_make_device_qualifier_descriptor(usbdescbldr_ctx_t *ctx,
                                                  usbdescbldr_item_t *item, 
-                                                 usbdescbldr_device_qualifier_short_form_t * form);
+                                                 const usbdescbldr_device_qualifier_short_form_t * form);
     
   // //////////////////////////////////////////////////////////////////
 
@@ -269,7 +270,7 @@ typedef struct usbdescbldr_ctx_s {
  usbdescbldr_status_t
     usbdescbldr_make_bos_descriptor(usbdescbldr_ctx_t *  ctx,
                                     usbdescbldr_item_t * item,
-                                    const uint8_t    capabilities);
+                                    uint8_t              capabilities);
 
 
   /// Generate a Device Capability descriptor.
@@ -281,9 +282,9 @@ typedef struct usbdescbldr_ctx_s {
   usbdescbldr_status_t
     usbdescbldr_make_device_capability_descriptor(usbdescbldr_ctx_t *  ctx,
                                                   usbdescbldr_item_t * item,
-                                                  const uint8_t        bDevCapabilityType,
+                                                  uint8_t              bDevCapabilityType,
                                                   const uint8_t *      typeDependent, // Anonymous byte data
-                                                  const size_t         typeDependentSize);
+                                                  size_t               typeDependentSize);
 
  
   // //////////////////////////////////////////////////////////////////
@@ -311,7 +312,7 @@ typedef struct usbdescbldr_ctx_s {
   usbdescbldr_status_t
     usbdescbldr_make_device_configuration_descriptor(usbdescbldr_ctx_t * ctx,
                                                      usbdescbldr_item_t * item,
-                                                     usbdescbldr_device_configuration_short_form_t * form);
+                                                     const usbdescbldr_device_configuration_short_form_t * form);
 
 
   // //////////////////////////////////////////////////////////////////
@@ -341,7 +342,7 @@ typedef struct usbdescbldr_ctx_s {
   usbdescbldr_status_t
     usbdescbldr_make_standard_interface_descriptor(usbdescbldr_ctx_t * ctx,
                                                    usbdescbldr_item_t * item,
-                                                   usbdescbldr_standard_interface_short_form_t * form);
+                                                   const usbdescbldr_standard_interface_short_form_t * form);
 
 
   /// The Make UVC Video Control Interface short-form.
@@ -365,7 +366,7 @@ typedef struct usbdescbldr_ctx_s {
   usbdescbldr_status_t
     usbdescbldr_make_vc_interface_descriptor(usbdescbldr_ctx_t * ctx,
                                              usbdescbldr_item_t * item,
-                                             usbdescbldr_vc_interface_short_form_t * form);
+                                             const usbdescbldr_vc_interface_short_form_t * form);
 
 
   /// The Make UVC Video Streaming Interface short-form.
@@ -389,7 +390,7 @@ typedef struct usbdescbldr_ctx_s {
   usbdescbldr_status_t
     usbdescbldr_make_vs_interface_descriptor(usbdescbldr_ctx_t * ctx,
                                              usbdescbldr_item_t * item,
-                                             usbdescbldr_vs_interface_short_form_t * form);
+                                             const usbdescbldr_vs_interface_short_form_t * form);
 
 
   // //////////////////////////////////////////////////////////////////
@@ -413,7 +414,7 @@ typedef struct usbdescbldr_ctx_s {
   usbdescbldr_status_t
     usbdescbldr_make_endpoint_descriptor(usbdescbldr_ctx_t * ctx,
                                          usbdescbldr_item_t * item,
-                                         usbdescbldr_endpoint_short_form_t * form);
+                                         const usbdescbldr_endpoint_short_form_t * form);
 
 
   // //////////////////////////////////////////////////////////////////
@@ -435,7 +436,7 @@ typedef struct usbdescbldr_ctx_s {
   usbdescbldr_status_t
     usbdescbldr_make_ss_ep_companion_descriptor(usbdescbldr_ctx_t * ctx,
                                                 usbdescbldr_item_t * item,
-                                                usbdescbldr_ss_ep_companion_short_form_t * form);
+                                                const usbdescbldr_ss_ep_companion_short_form_t * form);
 
 
   // //////////////////////////////////////////////////////////////////
@@ -461,11 +462,11 @@ typedef struct usbdescbldr_ctx_s {
   usbdescbldr_status_t
     usbdescbldr_make_interface_association_descriptor(usbdescbldr_ctx_t * ctx,
                                                       usbdescbldr_item_t * item,
-                                                      usbdescbldr_iad_short_form_t * form);
+                                                      const usbdescbldr_iad_short_form_t * form);
 
   // //////////////////////////////////////////////////////////////////
 
-  /// Generate a UVC Video Control Interface Header descriptor.
+  /// Generate a UVC Video Control Interface Header descriptor, variadic style.
   /// Pass the context, a result item, and the completed short-form structure.
   /// Note that the interfaces to be associated are provded (by number) at this
   /// point. The caller must be responsible for assigning these numbers to the
@@ -475,13 +476,30 @@ typedef struct usbdescbldr_ctx_s {
   ///\param [in] dwClockFrequency The clock frequency, in Hertz (deprecated; included for completeness).
   ///\param [in] ... The interfaces to follow this header. This list is terminated with USBDESCBLDR_END_LIST .
   usbdescbldr_status_t
-    usbdescbldr_make_vc_interface_header(usbdescbldr_ctx_t * ctx,
+    usbdescbldr_make_vc_interface_header(usbdescbldr_ctx_t *  ctx,
                                          usbdescbldr_item_t * item,
-                                         unsigned int dwClockFrequency,
+                                         uint32_t             dwClockFrequency,
                                          ...); // Terminated List of Interface Numbers 
     
 
 
+  /// Generate a UVC Video Control Interface Header descriptor, fixed parameter style.
+  /// Pass the context, a result item, and the completed short-form structure.
+  /// Note that the interfaces to be associated are provded (by number) at this
+  /// point. The caller must be responsible for assigning these numbers to the
+  /// interfaces which this header will enclose.
+  ///\param [in] ctx The context for the session.
+  ///\param [in,out] item The result for the make.
+  ///\param [in] dwClockFrequency The clock frequency, in Hertz (deprecated; included for completeness).
+  ///\param [in] interfaceList The interfaces to follow this header.
+  ///\param [in] interfaceListLength The number of interfaces in the interfaceList.
+  usbdescbldr_status_t
+    usbdescbldr_make_vc_interface_header_fixed(usbdescbldr_ctx_t *  ctx,
+                                               usbdescbldr_item_t * item,
+                                               uint32_t             dwClockFrequency,
+                                               const uint8_t *      interfaceList,
+                                               size_t               interfaceListLength);
+    
   // //////////////////////////////////////////////////////////////////
 
   // Video Control Units
@@ -507,9 +525,9 @@ typedef struct usbdescbldr_ctx_s {
   ///\param [in] form The values to be used to populate the descriptor.
 
   usbdescbldr_status_t
-    usbdescbldr_make_camera_terminal_descriptor(usbdescbldr_ctx_t * ctx,
+    usbdescbldr_make_camera_terminal_descriptor(usbdescbldr_ctx_t *  ctx,
                                                 usbdescbldr_item_t * item,
-                                                usbdescbldr_camera_terminal_short_form_t * form);
+                                                const usbdescbldr_camera_terminal_short_form_t * form);
 
  
   // //////////////////////////////////////////////////////////////////
@@ -531,14 +549,14 @@ typedef struct usbdescbldr_ctx_s {
   ///\param [in] form The values to be used to populate the descriptor.
 
   usbdescbldr_status_t
-    usbdescbldr_make_streaming_out_terminal_descriptor(usbdescbldr_ctx_t * ctx,
+    usbdescbldr_make_streaming_out_terminal_descriptor(usbdescbldr_ctx_t *  ctx,
                                                        usbdescbldr_item_t * item,
-                                                       usbdescbldr_streaming_out_terminal_short_form_t * form);
+                                                       const usbdescbldr_streaming_out_terminal_short_form_t * form);
 
 
   // //////////////////////////////////////////////////////////////////
 
-  /// Generate a VC Selector Unit Descriptor.
+  /// Generate a VC Selector Unit Descriptor, variadic style.
   /// Pass the context, a result item, and the completed short-form structure.
   ///\param [in] ctx The context for the session.
   ///\param [in,out] item The result for the make.
@@ -549,9 +567,27 @@ typedef struct usbdescbldr_ctx_s {
   usbdescbldr_status_t
     usbdescbldr_make_vc_selector_unit(usbdescbldr_ctx_t * ctx,
                                       usbdescbldr_item_t * item,
-                                      uint8_t iSelector, // string index
-                                      uint8_t bUnitID,
+                                      uint8_t              iSelector, // string index
+                                      uint8_t              bUnitID,
                                       ...); // Terminated List of Input (Source) Pin(s)
+   
+
+  /// Generate a VC Selector Unit Descriptor, fixed parameters style.
+  /// Pass the context, a result item, and the completed short-form structure.
+  ///\param [in] ctx The context for the session.
+  ///\param [in,out] item The result for the make.
+  ///\param [in] iSelector The string index to describe the selector.
+  ///\param [in] bUnitID The unit identifier for this selector.
+  ///\param [in] inputs The inputs for the pins, input[1]..input[n].
+  ///\param [in] inputsLength The number of inputs in the list (n - 1).
+
+  usbdescbldr_status_t
+    usbdescbldr_make_vc_selector_unit_fixed(usbdescbldr_ctx_t *  ctx,
+                                            usbdescbldr_item_t * item,
+                                            uint8_t              iSelector,     // string index
+                                            uint8_t              bUnitID,
+                                            const uint8_t *      inputs,        // List of Input (Source) Pin(s)
+                                            size_t               inputsLength); // Length of the above
    
 
   // //////////////////////////////////////////////////////////////////
@@ -578,7 +614,7 @@ typedef struct usbdescbldr_ctx_s {
   usbdescbldr_status_t
     usbdescbldr_make_vc_processor_unit(usbdescbldr_ctx_t * ctx,
                                        usbdescbldr_item_t * item,
-                                       usbdescbldr_vc_processor_unit_short_form * form);
+                                       const usbdescbldr_vc_processor_unit_short_form * form);
 
   
   // //////////////////////////////////////////////////////////////////
@@ -596,7 +632,7 @@ typedef struct usbdescbldr_ctx_s {
     uint8_t   iExtension;
   } usbdescbldr_vc_extension_unit_short_form_t;
 
-  /// Generate a VC Extension Unit Descriptor.
+  /// Generate a VC Extension Unit Descriptor, variadic style.
   /// Pass the context, a result item, and the completed short-form structure.
   ///\param [in] ctx The context for the session.
   ///\param [in,out] item The result for the make.
@@ -604,10 +640,25 @@ typedef struct usbdescbldr_ctx_s {
   ///\param [in] ... The sources for the unit, source[1]..source[n]. This list is terminated with USBDESCBLDR_LIST_END .
 
   usbdescbldr_status_t
-    usbdescbldr_make_extension_unit_descriptor(usbdescbldr_ctx_t * ctx,
+    usbdescbldr_make_extension_unit_descriptor(usbdescbldr_ctx_t *  ctx,
                                                usbdescbldr_item_t * item,
-                                               usbdescbldr_vc_extension_unit_short_form_t * form,
+                                               const usbdescbldr_vc_extension_unit_short_form_t * form,
                                                ...);
+
+  /// Generate a VC Extension Unit Descriptor, fixed parameters style.
+  /// Pass the context, a result item, and the completed short-form structure.
+  ///\param [in] ctx The context for the session.
+  ///\param [in,out] item The result for the make.
+  ///\param [in] form The values to be used to populate the descriptor.
+  ///\param [in] sources The sources for the unit, source[1]..source[n].
+  ///\param [in] sourcesLength The number of sources for the unit (n - 1) .
+
+  usbdescbldr_status_t
+    usbdescbldr_make_extension_unit_descriptor_fixed(usbdescbldr_ctx_t *  ctx,
+                                                     usbdescbldr_item_t * item,
+                                                     const usbdescbldr_vc_extension_unit_short_form_t * form,
+                                                     const uint8_t *      sources,
+                                                     size_t               sourcesLength);
 
 
   // //////////////////////////////////////////////////////////////////
@@ -615,9 +666,9 @@ typedef struct usbdescbldr_ctx_s {
   // UVC Class-Specific VC interrupt endpoint:
 
   usbdescbldr_status_t
-    usbdescbldr_make_vc_interrupt_ep(usbdescbldr_ctx_t * ctx,
+    usbdescbldr_make_vc_interrupt_ep(usbdescbldr_ctx_t *  ctx,
                                      usbdescbldr_item_t * item,
-                                     uint16_t wMaxTransferSize);
+                                     uint16_t             wMaxTransferSize);
 
 
   // //////////////////////////////////////////////////////////////////
@@ -645,10 +696,25 @@ typedef struct usbdescbldr_ctx_s {
   ///\param [in] ... bmaControls, eight-bit bitmasks as specified in the UVC specification, passed in order of increasing significance.
   /// Terminate this list with USBDESCBLDR_LIST_END .
   usbdescbldr_status_t
-    usbdescbldr_make_vs_interface_header(usbdescbldr_ctx_t * ctx,
+    usbdescbldr_make_vs_interface_header(usbdescbldr_ctx_t *  ctx,
                                          usbdescbldr_item_t * item,
-                                         usbdescbldr_vs_if_input_header_short_form_t * form,
+                                         const usbdescbldr_vs_if_input_header_short_form_t * form,
                                          ...);
+
+  /// Generate a UVC Video Stream Interface Input Header descriptor, fixed parameter style.
+  /// Pass the context, a result item, and the completed short-form structure.
+  ///\param [in] ctx The context for the session.
+  ///\param [in,out] item The result for the make.
+  ///\param [in] form The values to be used to populate the descriptor.
+  ///\param [in] ... bmaControls[0] .. bmaControls[j] 
+  ///\param [in] The number of bmaControl bytes above (j - 1).
+  /// Terminate this list with USBDESCBLDR_LIST_END .
+  usbdescbldr_status_t
+    usbdescbldr_make_vs_interface_header_fixed(usbdescbldr_ctx_t *  ctx,
+                                               usbdescbldr_item_t * item,
+                                               const usbdescbldr_vs_if_input_header_short_form_t * form,
+                                               const uint8_t *      bmaControls,
+                                               size_t               bmaControlsLength);
 
 
   // //////////////////////////////////////////////////////////////////
@@ -668,7 +734,7 @@ typedef struct usbdescbldr_ctx_s {
       uint8_t  bTriggerUsage;
     } usbdescbldr_vs_if_output_header_short_form_t;
 
-    /// Generate a UVC Video Stream Interface Output Header descriptor.
+    /// Generate a UVC Video Stream Interface Output Header descriptor, varadic style.
     /// Pass the context, a result item, and the completed short-form structure.
     ///\param [in] ctx The context for the session.
     ///\param [in,out] item The result for the make.
@@ -676,10 +742,26 @@ typedef struct usbdescbldr_ctx_s {
     ///\param [in] ... bmaControls, eight-bit bitmasks as specified in the UVC specification, passed in order of increasing significance.
     /// Terminate this list with USBDESCBLDR_LIST_END .
     usbdescbldr_status_t
-      usbdescbldr_make_uvc_vs_if_output_header(usbdescbldr_ctx_t * ctx,
+      usbdescbldr_make_uvc_vs_if_output_header(usbdescbldr_ctx_t *  ctx,
                                                usbdescbldr_item_t * item,
-                                               usbdescbldr_vs_if_output_header_short_form_t * form,
+                                               const usbdescbldr_vs_if_output_header_short_form_t * form,
                                                ...);
+
+
+    /// Generate a UVC Video Stream Interface Output Header descriptor, fixed style.
+    /// Pass the context, a result item, and the completed short-form structure.
+    ///\param [in] ctx The context for the session.
+    ///\param [in,out] item The result for the make.
+    ///\param [in] form The values to be used to populate the descriptor.
+    ///\param [in] bmaControls, eight-bit bitmasks as specified in the UVC specification
+    ///\param [in] bmaControlsLength, eight-bit bitmasks as specified in the UVC specification
+    /// Terminate this list with USBDESCBLDR_LIST_END .
+    usbdescbldr_status_t
+      usbdescbldr_make_uvc_vs_if_output_header_fixed(usbdescbldr_ctx_t *  ctx,
+																										 usbdescbldr_item_t * item,
+																										 const usbdescbldr_vs_if_output_header_short_form_t * form,
+																										 const  uint8_t *     bmaControls,
+																										 size_t               bmaControlsLength);
 
 
     // //////////////////////////////////////////////////////////////////
@@ -709,7 +791,7 @@ typedef struct usbdescbldr_ctx_s {
     usbdescbldr_status_t
       usbdescbldr_make_uvc_vs_format_frame(usbdescbldr_ctx_t * ctx,
                                            usbdescbldr_item_t * item,
-                                           usbdescbldr_uvc_vs_format_frame_based_short_form_t * form);
+                                           const usbdescbldr_uvc_vs_format_frame_based_short_form_t * form);
 
 
     // //////////////////////////////////////////////////////////////////
@@ -731,7 +813,7 @@ typedef struct usbdescbldr_ctx_s {
       uint32_t dwBytesPerLine;
     } usbdescbldr_uvc_vs_frame_frame_based_short_form_t;
 
-    /// Generate a UVC Video Stream Frame descriptor for Frame-Based payloads.
+    /// Generate a UVC Video Stream Frame descriptor for Frame-Based payloads, variadic form.
     /// Pass the context, a result item, and the completed short-form structure.
     ///\param [in] ctx The context for the session.
     ///\param [in,out] item The result for the make.
@@ -742,8 +824,25 @@ typedef struct usbdescbldr_ctx_s {
     usbdescbldr_status_t
       usbdescbldr_make_uvc_vs_frame_frame(usbdescbldr_ctx_t * ctx,
                                           usbdescbldr_item_t * item,
-                                          usbdescbldr_uvc_vs_frame_frame_based_short_form_t * form,
+                                          const usbdescbldr_uvc_vs_frame_frame_based_short_form_t * form,
                                           ...);
+
+
+    /// Generate a UVC Video Stream Frame descriptor for Frame-Based payloads, fixed form.
+    /// Pass the context, a result item, and the completed short-form structure.
+    ///\param [in] ctx The context for the session.
+    ///\param [in,out] item The result for the make.
+    ///\param [in] form The values to be used to populate the descriptor.
+    ///\param [in] dwIntervals The frame intervals. Depending on the setting of bFrameIntervalType in the
+    /// short form, the number (and meaning) of these will vary.
+    ///\param [in] dwIntervalsLength The number of frame intervals. (This is equal to bFrameIntervalType.)
+
+    usbdescbldr_status_t
+      usbdescbldr_make_uvc_vs_frame_frame_fixed(usbdescbldr_ctx_t *  ctx,
+                                                usbdescbldr_item_t * item,
+                                                const usbdescbldr_uvc_vs_frame_frame_based_short_form_t * form,
+                                                const uint32_t *     dwIntervals,
+                                                size_t               dwIntervalsLength);
 
 
     // //////////////////////////////////////////////////////////////////
@@ -773,9 +872,9 @@ typedef struct usbdescbldr_ctx_s {
     ///\param [in] form The values to be used to populate the descriptor.
 
     usbdescbldr_status_t
-      usbdescbldr_make_uvc_vs_format_uncompressed(usbdescbldr_ctx_t * ctx,
+      usbdescbldr_make_uvc_vs_format_uncompressed(usbdescbldr_ctx_t *  ctx,
                                                   usbdescbldr_item_t * item,
-                                                  usbdescbldr_uvc_vs_format_uncompressed_short_form_t * form);
+                                                  const usbdescbldr_uvc_vs_format_uncompressed_short_form_t * form);
 
 
     // //////////////////////////////////////////////////////////////////
@@ -797,18 +896,33 @@ typedef struct usbdescbldr_ctx_s {
       uint8_t  bFrameIntervalType;
     } usbdescbldr_uvc_vs_frame_uncompressed_short_form_t;
 
-    /// Generate a UVC Video Stream Frame descriptor for Uncompressed payloads.
+    /// Generate a UVC Video Stream Frame descriptor for Uncompressed payloads, varadic form.
     /// Pass the context, a result item, and the completed short-form structure.
     ///\param [in] ctx The context for the session.
     ///\param [in,out] item The result for the make.
     ///\param [in] form The values to be used to populate the descriptor.
     ///\param [in] ... The frame intervals. Depending on the setting of bFrameIntervalType in the
-    /// short form, the number (and meaning) of these will vary.
+    ///\param [in] dwIntervals The frame intervals. Depending on the setting of bFrameIntervalType in the
     usbdescbldr_status_t
-      usbdescbldr_make_uvc_vs_frame_uncompressed(usbdescbldr_ctx_t * ctx,
+      usbdescbldr_make_uvc_vs_frame_uncompressed(usbdescbldr_ctx_t *  ctx,
                                                  usbdescbldr_item_t * item,
-                                                 usbdescbldr_uvc_vs_frame_uncompressed_short_form_t * form,
+                                                 const usbdescbldr_uvc_vs_frame_uncompressed_short_form_t * form,
                                                  ...);
+
+    /// Generate a UVC Video Stream Frame descriptor for Uncompressed payloads, fixed form.
+    /// Pass the context, a result item, and the completed short-form structure.
+    ///\param [in] ctx The context for the session.
+    ///\param [in,out] item The result for the make.
+    ///\param [in] form The values to be used to populate the descriptor.
+    ///\param [in] dwIntervals The frame intervals. Depending on the setting of bFrameIntervalType in the
+    /// short form, the number (and meaning) of these will vary.
+    ///\param [in] dwIntervalsLength The number of frame intervals. (This is equal to bFrameIntervalType.)
+    usbdescbldr_status_t
+      usbdescbldr_make_uvc_vs_frame_uncompressed_fixed(usbdescbldr_ctx_t *  ctx,
+                                                       usbdescbldr_item_t * item,
+                                                       const usbdescbldr_uvc_vs_frame_uncompressed_short_form_t * form,
+                                                       const  uint32_t *    dwIntervals,
+                                                       size_t               dwIntervalsLength);
 
 
 #ifdef __cplusplus
