@@ -125,9 +125,9 @@ typedef struct usbdescbldr_ctx_s {
   /// the final results, which may provide sanity checking and sizes.
   ///\param [in] bufferSize The size in bytes of the buffer.
   usbdescbldr_status_t
-  usbdescbldr_init(usbdescbldr_ctx_t *  ctx,
-                   unsigned char *      buffer,
-                   size_t               bufferSize);
+  usbdescbldr_init(usbdescbldr_ctx_t * 	ctx,
+                   unsigned char *		buffer,
+                   size_t            	bufferSize);
 
   /// Commit (complete/finish) the build session in progress.
   usbdescbldr_status_t

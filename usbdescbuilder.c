@@ -198,7 +198,7 @@ usbdescbldr_add_children(usbdescbldr_ctx_t *  ctx,
 
 usbdescbldr_status_t
 usbdescbldr_init(usbdescbldr_ctx_t *    ctx,
-                 const unsigned char *  buffer,
+                 unsigned char *        buffer,
                  size_t                 bufferSize)
 {
   // Do not concern ourselves with initializing something
@@ -927,7 +927,6 @@ usbdescbldr_make_vc_interface_header_fixed(usbdescbldr_ctx_t *  ctx,
   size_t needs;
   uint16_t tShort;
   uint32_t tInt;
-  uint8_t * drop;
 
   if(ctx == NULL || item == NULL)
     return USBDESCBLDR_INVALID;
@@ -1447,7 +1446,6 @@ usbdescbldr_make_vs_interface_header_fixed(usbdescbldr_ctx_t *  ctx,
 {
   USB_UVC_VS_INPUT_HEADER_DESCRIPTOR * dest = NULL;
   size_t needs;
-  uint8_t * drop;             // Place to drop next built member
 
   if(item == NULL || form == NULL)
     return USBDESCBLDR_INVALID;
@@ -1758,6 +1756,7 @@ usbdescbldr_make_uvc_vs_frame_frame_fixed(usbdescbldr_ctx_t *  ctx,
   uint8_t * drop;             // Place to drop next built member
   uint16_t t16;
   uint32_t t32;
+  uint32_t i;
   uint8_t   intervalsParams;
 
   if(item == NULL || form == NULL)
@@ -1819,7 +1818,7 @@ usbdescbldr_make_uvc_vs_frame_frame_fixed(usbdescbldr_ctx_t *  ctx,
 
     // Need to swap the intervals, as they aren't bytes
     drop = (uint8_t *) (dest + 1); // Beginning of interval table
-    for(uint32_t i = 0; i < intervalsParams; i++) {
+    for (i = 0; i < intervalsParams; i++) {
       t32 = ctx->fHostToLittleInt(dwIntervals[i]);
       memcpy(drop, &t32, sizeof(t32));
       drop += sizeof(t32);
@@ -1878,7 +1877,7 @@ usbdescbldr_make_uvc_vs_frame_uncompressed_fixed(usbdescbldr_ctx_t *  ctx,
                                                  size_t               dwIntervalsLength)
 {
   UVC_VS_FRAME_UNCOMPRESSED_DESCRIPTOR * dest = NULL;
-  uint8_t   intervalsParams, numIntervals;
+  uint8_t   intervalsParams;
   uint16_t  t16;
   uint32_t  t32;
   size_t    needs;
@@ -1965,7 +1964,7 @@ usbdescbldr_make_uvc_vs_frame_uncompressed_fixed(usbdescbldr_ctx_t *  ctx,
 usbdescbldr_status_t
 usbdescbldr_make_uvc_vs_frame_uncompressed(usbdescbldr_ctx_t * ctx,
                                            usbdescbldr_item_t * item,
-                                           usbdescbldr_uvc_vs_frame_uncompressed_short_form_t * form,
+                                           const usbdescbldr_uvc_vs_frame_uncompressed_short_form_t * form,
                                            ... /* interval data */)
 {
   uint8_t   numIntervals;
