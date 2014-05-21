@@ -1,11 +1,11 @@
 /* Copyright (c) 2014 LEAP Motion. All rights reserved.
-*
-* The intellectual and technical concepts contained herein are proprietary and
-* confidential to Leap Motion, and are protected by trade secret or copyright
-* law. Dissemination of this information or reproduction of this material is
-* strictly forbidden unless prior written permission is obtained from LEAP
-* Motion.
-*/
+ *
+ * The intellectual and technical concepts contained herein are proprietary and
+ * confidential to Leap Motion, and are protected by trade secret or copyright
+ * law. Dissemination of this information or reproduction of this material is
+ * strictly forbidden unless prior written permission is obtained from LEAP
+ * Motion.
+ */
 
 #pragma once
 
@@ -28,10 +28,10 @@
 // The following MUST mimic the exported, API-visible usbdescbldr_guid_t :
 typedef struct
 {
-	uint32_t dwData1;
-	uint16_t dwData2;
-	uint16_t dwData3;
-	uint8_t  dwData4[8];
+  uint32_t dwData1;
+  uint16_t dwData2;
+  uint16_t dwData3;
+  uint8_t  dwData4[8];
 } USB_GUID;
 
 
@@ -45,8 +45,8 @@ enum
   UVC_INTERFACE = 0x04,
   UVC_ENDPOINT = 0x05,
   USB_POWER = 0x08,
-  USB_INTERFACE_ASSOCIATION = 11,
-  USB_BOS = 0x0f,
+  USB_INTERFACE_ASSOCIATION = 0x0B,
+  USB_BOS = 0x0F,
   USB_DEVICE_CAPABILITY = 0x10,
   UVC_CS_UNDEFINED = 0x20,
   UVC_CS_DEVICE = 0x21,
@@ -126,7 +126,7 @@ enum _USB_DESCRIPTOR_TYPE
   USB_DESCRIPTOR_TYPE_INTERFACE_ASSOCIATION = 0x0B,
 
   //! Binary Object Store descriptor type.
-  USB_DESCRIPTOR_TYPE_BOS = 0x0f,
+  USB_DESCRIPTOR_TYPE_BOS = 0x0F,
 
   //! Device Capability descriptor type.
   USB_DESCRIPTOR_TYPE_DEVICE_CAPABILITY = 0x10,
@@ -605,7 +605,5 @@ static const uint8_t USB_VC_SUBTYPE_EP_UNDEFINED = 0x00;
 static const uint8_t USB_VC_SUBTYPE_EP_GENERAL = 0x01;
 static const uint8_t USB_VC_SUBTYPE_EP_ENDPOINT = 0x02;
 static const uint8_t USB_VC_SUBTYPE_EP_INTERRUPT = 0x03;
-
-// USB_UVC_ITT_CAMERA
 
 #pragma pack(pop)
