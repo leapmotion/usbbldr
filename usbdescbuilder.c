@@ -1545,7 +1545,6 @@ usbdescbldr_make_uvc_vs_if_output_header_fixed(usbdescbldr_ctx_t *  ctx,
 {
   USB_UVC_VS_OUTPUT_HEADER_DESCRIPTOR * dest;
   size_t    needs;
-  uint8_t   bNumFormats;      // Number of formats (controls)
   uint8_t * drop;             // Place to drop next built member
 
   if(item == NULL || form == NULL)
@@ -1569,7 +1568,7 @@ usbdescbldr_make_uvc_vs_if_output_header_fixed(usbdescbldr_ctx_t *  ctx,
     dest->header.bDescriptorType = USB_DESCRIPTOR_TYPE_VC_CS_INTERFACE;
     dest->bDescriptorSubType = USB_INTERFACE_SUBTYPE_VS_OUTPUT_HEADER;
 
-    dest->bNumFormats = bNumFormats;
+    dest->bNumFormats = form->bNumFormats;
     dest->bEndpointAddress = form->bEndpointAddress;
     dest->bTerminalLink = form->bTerminalLink;
     dest->bControlSize = sizeof(uint8_t); // Not very general, but standardized (for now)
