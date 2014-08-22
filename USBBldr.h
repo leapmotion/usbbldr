@@ -16,7 +16,7 @@
 #include <stdint.h>
 
 // Select the class of UVC desired: 1.0, 1.1, 1.5
-#define UVC_CLASS_SELECT 110
+#define UVC_CLASS_SELECT 100
 #if     UVC_CLASS_SELECT == 150
 #define UVC_CLASS 0x0150    // 1.5, conveniently in BCD
 #elif   UVC_CLASS_SELECT == 110
