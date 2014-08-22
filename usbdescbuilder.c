@@ -1863,7 +1863,7 @@ usbdescbldr_make_uvc_vs_frame_frame(usbdescbldr_ctx_t *  ctx,
     intervals[i] = va_arg(va, uint32_t);
   va_end(va);
 
-  return usbdescbldr_make_uvc_vs_frame_frame(ctx, item, form, intervals, numIntervals);
+  return usbdescbldr_make_uvc_vs_frame_frame_fixed(ctx, item, form, intervals, numIntervals);
 }
 
 
