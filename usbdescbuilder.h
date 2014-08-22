@@ -808,7 +808,6 @@ typedef struct usbdescbldr_ctx_s {
       uint16_t wHeight;
       uint32_t dwMinBitRate;
       uint32_t dwMaxBitRate;
-      uint32_t dwMaxVideoFrameBufferSize;
       uint32_t dwDefaultFrameInterval;
       uint8_t  bFrameIntervalType;
       uint32_t dwBytesPerLine;

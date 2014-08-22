@@ -1795,8 +1795,8 @@ usbdescbldr_make_uvc_vs_frame_frame_fixed(usbdescbldr_ctx_t *  ctx,
     dest->bFrameIndex = form->bFrameIndex;
     dest->bmCapabilities = form->bmCapabilities;
 
-    t16 = ctx->fHostToLittleShort(form->wWidth);
-    memcpy(&dest->wWidth, &t16, sizeof(dest->wWidth));
+    t16 = ctx->fHostToLittleShort(form->wHeight);
+    memcpy(&dest->wHeight, &t16, sizeof(dest->wHeight));
 
     t16 = ctx->fHostToLittleShort(form->wWidth);
     memcpy(&dest->wWidth, &t16, sizeof(dest->wWidth));
@@ -1863,7 +1863,7 @@ usbdescbldr_make_uvc_vs_frame_frame(usbdescbldr_ctx_t *  ctx,
     intervals[i] = va_arg(va, uint32_t);
   va_end(va);
 
-  return usbdescbldr_make_uvc_vs_frame_frame(ctx, item, form, intervals, numIntervals);
+  return usbdescbldr_make_uvc_vs_frame_frame_fixed(ctx, item, form, intervals, (size_t) numIntervals);
 }
 
 
@@ -1988,5 +1988,5 @@ usbdescbldr_make_uvc_vs_frame_uncompressed(usbdescbldr_ctx_t * ctx,
     intervals[i] = va_arg(va, uint32_t);
   va_end(va);
 
-  return usbdescbldr_make_uvc_vs_frame_uncompressed_fixed(ctx, item, form, intervals, numIntervals);
+  return usbdescbldr_make_uvc_vs_frame_uncompressed_fixed(ctx, item, form, intervals, (size_t) numIntervals);
 }
