@@ -1795,8 +1795,8 @@ usbdescbldr_make_uvc_vs_frame_frame_fixed(usbdescbldr_ctx_t *  ctx,
     dest->bFrameIndex = form->bFrameIndex;
     dest->bmCapabilities = form->bmCapabilities;
 
-    t16 = ctx->fHostToLittleShort(form->wWidth);
-    memcpy(&dest->wWidth, &t16, sizeof(dest->wWidth));
+    t16 = ctx->fHostToLittleShort(form->wHeight);
+    memcpy(&dest->wHeight, &t16, sizeof(dest->wHeight));
 
     t16 = ctx->fHostToLittleShort(form->wWidth);
     memcpy(&dest->wWidth, &t16, sizeof(dest->wWidth));

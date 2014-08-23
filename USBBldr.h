@@ -507,7 +507,6 @@ typedef struct _UVC_VS_FRAME_FRAME_DESCRIPTOR
   uint16_t wHeight;
   uint32_t dwMinBitRate;
   uint32_t dwMaxBitRate;
-  uint32_t dwVideoFrameBufferSize;
   uint32_t dwDefaultFrameInterval;
   uint8_t  bFrameIntervalType;
   uint32_t dwBytesPerLine;
